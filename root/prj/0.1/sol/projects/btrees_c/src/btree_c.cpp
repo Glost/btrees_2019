@@ -16,19 +16,19 @@ namespace btree {
     extern "C" {
 #endif
 
-    void create(BaseBTree::TreeType treeType, UShort order, UShort keySize, const std::string& treeFileName)
+    void create(BaseBTree::TreeType treeType, UShort order, UShort keySize, const char* treeFileName)
     {
         close();
 
         tree = new FileBaseBTree(treeType, order, keySize, &comparator, treeFileName);
     }
 
-    void createBTree(UShort order, UShort keySize, const std::string& treeFileName)
+    void createBTree(UShort order, UShort keySize, const char* treeFileName)
     {
         create(BaseBTree::TreeType::B_TREE, order, keySize, treeFileName);
     }
 
-    void open(BaseBTree::TreeType treeType, const std::string& treeFileName)
+    void open(BaseBTree::TreeType treeType, const char* treeFileName)
     {
         close();
 

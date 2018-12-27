@@ -49,11 +49,11 @@ namespace btree {
 
         static ByteComparator comparator;
 
-        void create(BaseBTree::TreeType treeType, UShort order, UShort keySize, const std::string& treeFileName);
+        void create(BaseBTree::TreeType treeType, UShort order, UShort keySize, const char* treeFileName);
 
-        void createBTree(UShort order, UShort keySize, const std::string& treeFileName);
+        void createBTree(UShort order, UShort keySize, const char* treeFileName);
 
-        void open(BaseBTree::TreeType treeType, const std::string& treeFileName);
+        void open(BaseBTree::TreeType treeType, const char* treeFileName);
 
         void close();
 

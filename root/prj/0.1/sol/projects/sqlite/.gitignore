@@ -1,0 +1,4 @@
+*_FOSSIL_
+*.fossil
+test/*.db
+bld/*

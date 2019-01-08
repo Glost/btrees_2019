@@ -10,42 +10,38 @@
 
 #include "btree_c.h"
 
-namespace btree {
-
 #ifdef __cplusplus
-    extern "C" {
+extern "C" {
 #endif
 
-    void create(BaseBTree::TreeType treeType, UShort order, UShort keySize, const char* treeFileName)
+void create(BaseBTree::TreeType treeType, UShort order, UShort keySize, const char* treeFileName)
+{
+    close();
+
+    tree = new FileBaseBTree(treeType, order, keySize, &comparator, treeFileName);
+}
+
+void createBTree(UShort order, UShort keySize, const char* treeFileName)
+{
+    create(BaseBTree::TreeType::B_TREE, order, keySize, treeFileName);
+}
+
+void open(BaseBTree::TreeType treeType, const char* treeFileName)
+{
+    close();
+
+    tree = new FileBaseBTree(treeType, treeFileName, &comparator);
+}
+
+void close()
+{
+    if (tree != nullptr)
     {
-        close();
-
-        tree = new FileBaseBTree(treeType, order, keySize, &comparator, treeFileName);
+        delete tree;
+        tree = nullptr;
     }
-
-    void createBTree(UShort order, UShort keySize, const char* treeFileName)
-    {
-        create(BaseBTree::TreeType::B_TREE, order, keySize, treeFileName);
-    }
-
-    void open(BaseBTree::TreeType treeType, const char* treeFileName)
-    {
-        close();
-
-        tree = new FileBaseBTree(treeType, treeFileName, &comparator);
-    }
-
-    void close()
-    {
-        if (tree != nullptr)
-        {
-            delete tree;
-            tree = nullptr;
-        }
-    }
+}
 
 #ifdef __cplusplus
-    } // extern "C"
+} // extern "C"
 #endif
-
-} // namespace btree

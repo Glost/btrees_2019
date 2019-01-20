@@ -49,25 +49,25 @@ static FileBaseBTree* tree = nullptr;
 
 static ByteComparator comparator;
 
-void create(BaseBTree::TreeType treeType, UShort order, UShort keySize, const char* treeFileName);
+static void create(BaseBTree::TreeType treeType, UShort order, UShort keySize, const char* treeFileName);
 
-void createBTree(UShort order, UShort keySize, const char* treeFileName);
+static void createBTree(UShort order, UShort keySize, const char* treeFileName);
 
-void open(BaseBTree::TreeType treeType, const char* treeFileName);
+static void open(BaseBTree::TreeType treeType, const char* treeFileName);
 
-void close();
+static void close();
 
-void insert(const Byte* k) { tree->insert(k); }
+static void insert(const Byte* k) { tree->insert(k); }
 
-Byte* search(const Byte* k) { return tree->search(k); }
+static Byte* search(const Byte* k) { return tree->search(k); }
 
-int searchAll(const Byte* k, std::list<Byte*>& keys) { return tree->searchAll(k, keys); }
+static int searchAll(const Byte* k, std::list<Byte*>& keys) { return tree->searchAll(k, keys); }
 
 #ifdef BTREE_WITH_DELETION
 
-bool removeKey(const Byte* k) { return tree->remove(k); }
+static bool removeKey(const Byte* k) { return tree->remove(k); }
 
-int removeAll(const Byte* k) { return tree->removeAll(k); }
+static int removeAll(const Byte* k) { return tree->removeAll(k); }
 
 #endif
 

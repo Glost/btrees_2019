@@ -14,26 +14,26 @@
 extern "C" {
 #endif
 
-void create(BaseBTree::TreeType treeType, UShort order, UShort keySize, const char* treeFileName)
+static void create(BaseBTree::TreeType treeType, UShort order, UShort keySize, const char* treeFileName)
 {
     close();
 
     tree = new FileBaseBTree(treeType, order, keySize, &comparator, treeFileName);
 }
 
-void createBTree(UShort order, UShort keySize, const char* treeFileName)
+static void createBTree(UShort order, UShort keySize, const char* treeFileName)
 {
     create(BaseBTree::TreeType::B_TREE, order, keySize, treeFileName);
 }
 
-void open(BaseBTree::TreeType treeType, const char* treeFileName)
+static void open(BaseBTree::TreeType treeType, const char* treeFileName)
 {
     close();
 
     tree = new FileBaseBTree(treeType, treeFileName, &comparator);
 }
 
-void close()
+static void close()
 {
     if (tree != nullptr)
     {

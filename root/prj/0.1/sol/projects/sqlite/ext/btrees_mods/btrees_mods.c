@@ -15,7 +15,7 @@ static int btreesModsCreate(sqlite3* db, void* pAux, int argc, char* const* argv
     return btreesModsInit(db, pAux, argc, argv, ppVTab, pzErr, 1);
 }
 
-static int btreesModsConnect(sqlite3* db, void* pAux, int argc, char* const* argv, sqlite3_vtab** ppVTab, char** pzErr);
+static int btreesModsConnect(sqlite3* db, void* pAux, int argc, char* const* argv, sqlite3_vtab** ppVTab, char** pzErr)
 {
     return btreesModsInit(db, pAux, argc, argv, ppVTab, pzErr, 0);
 }
@@ -27,8 +27,15 @@ static int btreesModsBestIndex(sqlite3_vtab* tab, sqlite3_index_info* pIdxInfo)
     return rc;
 }
 
-static btreesModsDisconnect(sqlite3_vtab* pVtab)
+static int btreesModsDisconnect(sqlite3_vtab* pVtab)
 {
+    sqlite3_free(pVtab);
+    return SQLITE_OK;
+}
+
+static int btreesModsDestroy(sqlite3_vtab* pVtab)
+{
+    close();
     sqlite3_free(pVtab);
     return SQLITE_OK;
 }
@@ -40,7 +47,22 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, char* const* argv, 
 
     srand(time(NULL));
 
-    // TODO: implement the method.
+    sqlite3_str* pSql = sqlite3_str_new(db);
+    sqlite3_str_appendf(pSql, "CREATE TABLE %s(%s", argv[2], argv[3]);
+
+    int i = 4;
+    for (; i < argc; ++i)
+        sqlite3_str_appendf(pSql, ",%s", argv[i]);
+
+    sqlite3_str_appendf(pSql, ");");
+    char* zSql = sqlite3_str_finish(pSql);
+
+    if (!zSql)
+        rc = SQLITE_NOMEM;
+    else if (SQLITE_OK != (rc = sqlite3_declare_vtab(db, zSql)))
+        *pzErr = sqlite3_mprintf("%s", sqlite3_errmsg(db));
+
+    sqlite3_free(zSql);
 
     return rc;
 }
@@ -76,8 +98,13 @@ static int createIndex(sqlite3_index_info* pIdxInfo, int order, int keySize)
 }
 
 static sqlite3_module btreesModsModule = {
-        NULL,
-        NULL//, // TODO: complete the module struct instance.
+        0, // iVersion
+        btreesModsCreate,
+        btreesModsConnect,
+        btreesModsBestIndex,
+        btreesModsDisconnect,
+        btreesModsDestroy //,
+        // TODO: complete the module implementation.
 };
 
 int sqlite3BtreesModsInit(sqlite3* db, char** pzErrMsg, const sqlite3_api_routines* pApi)

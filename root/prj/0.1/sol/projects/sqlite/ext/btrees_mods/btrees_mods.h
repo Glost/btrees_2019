@@ -25,15 +25,27 @@ __declspec(dllexport)
 
 using namespace btree;
 
-int sqlite3BtreesModsInit(sqlite3* db, char** pzErrMsg, const sqlite3_api_routines* pApi);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-static int btreesModsCreate(sqlite3* db, void* pAux, int argc, char* const* argv, sqlite3_vtab** ppVTab, char** pzErr);
+int sqlite3_btreesmods_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi);
 
-static int btreesModsConnect(sqlite3* db, void* pAux, int argc, char* const* argv, sqlite3_vtab** ppVTab, char** pzErr);
+#ifdef __cplusplus
+}; // extern "C"
+#endif
 
-static int btreesModsInit(sqlite3* db, void* pAux, int argc, char* const* argv, sqlite3_vtab** ppVTab, char** pzErr,
-                          int isCreate);
+static int btreesModsCreate(sqlite3* db, void* pAux, int argc, const char* const* argv,
+        sqlite3_vtab** ppVTab, char** pzErr);
 
-static btreesModsDisconnect(sqlite3_vtab* pVtab);
+static int btreesModsConnect(sqlite3* db, void* pAux, int argc, const char* const* argv,
+        sqlite3_vtab** ppVTab, char** pzErr);
+
+static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* argv,
+        sqlite3_vtab** ppVTab, char** pzErr, int isCreate);
+
+static int btreesModsDisconnect(sqlite3_vtab* pVtab);
+
+static int createIndex(sqlite3_index_info* pIdxInfo, int order, int keySize);
 
 #endif //BTREES_BTREES_MODS_H

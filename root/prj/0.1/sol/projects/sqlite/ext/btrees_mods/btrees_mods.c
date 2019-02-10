@@ -10,12 +10,14 @@
 
 #include "btrees_mods.h"
 
-static int btreesModsCreate(sqlite3* db, void* pAux, int argc, char* const* argv, sqlite3_vtab** ppVTab, char** pzErr)
+static int btreesModsCreate(sqlite3* db, void* pAux, int argc, const char* const* argv,
+        sqlite3_vtab** ppVTab, char** pzErr)
 {
     return btreesModsInit(db, pAux, argc, argv, ppVTab, pzErr, 1);
 }
 
-static int btreesModsConnect(sqlite3* db, void* pAux, int argc, char* const* argv, sqlite3_vtab** ppVTab, char** pzErr)
+static int btreesModsConnect(sqlite3* db, void* pAux, int argc, const char* const* argv,
+        sqlite3_vtab** ppVTab, char** pzErr)
 {
     return btreesModsInit(db, pAux, argc, argv, ppVTab, pzErr, 0);
 }
@@ -40,15 +42,15 @@ static int btreesModsDestroy(sqlite3_vtab* pVtab)
     return SQLITE_OK;
 }
 
-static int btreesModsInit(sqlite3* db, void* pAux, int argc, char* const* argv, sqlite3_vtab** ppVTab, char** pzErr,
-                          int isCreate)
+static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* argv,
+        sqlite3_vtab** ppVTab, char** pzErr, int isCreate)
 {
     int rc = SQLITE_OK;
 
     srand(time(NULL));
 
     sqlite3_str* pSql = sqlite3_str_new(db);
-    sqlite3_str_appendf(pSql, "CREATE TABLE %s(%s", argv[2], argv[3]);
+    sqlite3_str_appendf(pSql, "CREATE TABLE %s_real(%s", argv[2], argv[3]);
 
     int i = 4;
     for (; i < argc; ++i)
@@ -57,10 +59,18 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, char* const* argv, 
     sqlite3_str_appendf(pSql, ");");
     char* zSql = sqlite3_str_finish(pSql);
 
+    sqlite3_stmt* ppStmt = 0;
+
     if (!zSql)
         rc = SQLITE_NOMEM;
-    else if (SQLITE_OK != (rc = sqlite3_declare_vtab(db, zSql)))
+    else if (SQLITE_OK != (rc = sqlite3_prepare_v2(db, zSql, -1, &ppStmt, 0)))
         *pzErr = sqlite3_mprintf("%s", sqlite3_errmsg(db));
+
+    rc = sqlite3_step(ppStmt);
+
+    rc = createIndex(0, 2, 4);
+
+    rc = sqlite3_declare_vtab(db, zSql);
 
     sqlite3_free(zSql);
 
@@ -75,17 +85,17 @@ static int createIndex(sqlite3_index_info* pIdxInfo, int order, int keySize)
     strcpy(treeFileName, treePrefix);
 
     char treeRandomId[20];
-    itoa(rand(), treeRandomId, 10);
+    snprintf(treeRandomId, 20, "%d");
     strcat(treeFileName, treeRandomId);
 
     char treeTimeStamp[20];
-    itoa(time(), treeTimeStamp, 10);
+    snprintf(treeTimeStamp, 20, "%d");
     strcat(treeFileName, treeTimeStamp);
 
     char* treeFileExtension = ".btree";
     strcat(treeFileName, treeFileExtension);
 
-    switch (pIdxInfo->idxNum)
+    switch (1) //    switch (pIdxInfo->idxNum)
     {
         case 1: create(BaseBTree::TreeType::B_TREE, order, keySize, treeFileName); break;
         case 2: create(BaseBTree::TreeType::B_PLUS_TREE, order, keySize, treeFileName); break;
@@ -103,12 +113,16 @@ static sqlite3_module btreesModsModule = {
         btreesModsConnect,
         btreesModsBestIndex,
         btreesModsDisconnect,
-        btreesModsDestroy //,
-        // TODO: complete the module implementation.
+        btreesModsDestroy,
+//        // TODO: complete the module implementation.
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-int sqlite3BtreesModsInit(sqlite3* db, char** pzErrMsg, const sqlite3_api_routines* pApi)
-{
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int sqlite3_btreesmods_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
     int rc = SQLITE_OK;
     SQLITE_EXTENSION_INIT2(pApi);
 
@@ -116,3 +130,7 @@ int sqlite3BtreesModsInit(sqlite3* db, char** pzErrMsg, const sqlite3_api_routin
 
     return rc;
 }
+
+#ifdef __cplusplus
+}; // extern "C"
+#endif

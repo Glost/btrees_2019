@@ -75,5 +75,6 @@ static int removeAll(const Byte* k) { return tree->removeAll(k); }
 }; // extern "C"
 #endif
 
+#include "btree_c.hpp"
 
 #endif //BTREES_BTREE_C_H

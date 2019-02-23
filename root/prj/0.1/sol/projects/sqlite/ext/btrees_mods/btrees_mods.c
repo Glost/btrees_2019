@@ -26,6 +26,7 @@ static int btreesModsBestIndex(sqlite3_vtab* tab, sqlite3_index_info* pIdxInfo)
 {
     int rc = SQLITE_OK;
     pIdxInfo->idxNum = 1;
+    params.bestIndex = pIdxInfo->idxNum;
     return rc;
 }
 
@@ -59,16 +60,28 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* 
     sqlite3_str_appendf(pSql, ");");
     char* zSql = sqlite3_str_finish(pSql);
 
-    sqlite3_stmt* ppStmt = 0;
+    sqlite3_stmt* stmt = NULL;
 
     if (!zSql)
         rc = SQLITE_NOMEM;
-    else if (SQLITE_OK != (rc = sqlite3_prepare_v2(db, zSql, -1, &ppStmt, 0)))
+    else if (SQLITE_OK != (rc = sqlite3_prepare_v2(db, zSql, -1, &stmt, 0)))
         *pzErr = sqlite3_mprintf("%s", sqlite3_errmsg(db));
 
-    rc = sqlite3_step(ppStmt);
+    rc = sqlite3_step(stmt);
+    rc = sqlite3_finalize(stmt);
 
-    rc = createIndex(0, 2, 4);
+    if (isCreate)
+    {
+        sqlite3_str* selectSql = sqlite3_str_new(db);
+        sqlite3_str_appendf(selectSql, "SELECT * FROM %s_real;", argv[2]);
+        char* selectZSql = sqlite3_str_finish(selectSql);
+        sqlite3_stmt* selectStmt = NULL;
+        rc = sqlite3_prepare_v2(db, selectZSql, -1, &selectStmt, 0);
+        *pzErr = sqlite3_mprintf("%s", sqlite3_errmsg(db));
+        registerIndexColumn(db, selectStmt, argv[2]);
+        rc = createIndex(2, params.indexDataSize);
+        sqlite3_finalize(selectStmt);
+    }
 
     rc = sqlite3_declare_vtab(db, zSql);
 
@@ -77,7 +90,7 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* 
     return rc;
 }
 
-static int createIndex(sqlite3_index_info* pIdxInfo, int order, int keySize)
+static int createIndex(int order, int keySize)
 {
     char treeFileName[100];
 
@@ -85,17 +98,17 @@ static int createIndex(sqlite3_index_info* pIdxInfo, int order, int keySize)
     strcpy(treeFileName, treePrefix);
 
     char treeRandomId[20];
-    snprintf(treeRandomId, 20, "%d");
+    snprintf(treeRandomId, 20, "%d", rand());
     strcat(treeFileName, treeRandomId);
 
     char treeTimeStamp[20];
-    snprintf(treeTimeStamp, 20, "%d");
+    snprintf(treeTimeStamp, 20, "%d", time(NULL));
     strcat(treeFileName, treeTimeStamp);
 
     char* treeFileExtension = ".btree";
     strcat(treeFileName, treeFileExtension);
 
-    switch (1) //    switch (pIdxInfo->idxNum)
+    switch (params.bestIndex)
     {
         case 1: create(BaseBTree::TreeType::B_TREE, order, keySize, treeFileName); break;
         case 2: create(BaseBTree::TreeType::B_PLUS_TREE, order, keySize, treeFileName); break;

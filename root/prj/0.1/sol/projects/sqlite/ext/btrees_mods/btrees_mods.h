@@ -50,9 +50,11 @@ static int btreesModsDisconnect(sqlite3_vtab* pVtab);
 
 static int btreesModsDestroy(sqlite3_vtab* pVtab);
 
-static int createIndex(int order, int keySize);
+static char* getTreeFileName(char* treeFileName);
 
-static void registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, const char* tableName);
+static int createIndex(int order, int keySize, const char* treeFileName);
+
+static void registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, const char* tableName, const char* treeFileName);
 
 static int getDataSizeByType(const char* dataType);
 
@@ -75,6 +77,7 @@ struct indexParams {
     const char* indexColName;
     const char* indexDataType;
     int indexDataSize;
+    const char* treeFileName;
 };
 
 static indexParams params = {
@@ -82,7 +85,8 @@ static indexParams params = {
         -1,
         NULL,
         NULL,
-        0
+        0,
+        NULL
 };
 
 #endif //BTREES_BTREES_MODS_H

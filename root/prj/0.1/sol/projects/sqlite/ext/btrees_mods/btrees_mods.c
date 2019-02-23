@@ -78,8 +78,10 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* 
         sqlite3_stmt* selectStmt = NULL;
         rc = sqlite3_prepare_v2(db, selectZSql, -1, &selectStmt, 0);
         *pzErr = sqlite3_mprintf("%s", sqlite3_errmsg(db));
-        registerIndexColumn(db, selectStmt, argv[2]);
-        rc = createIndex(2, params.indexDataSize);
+        char treeFileName[100];
+        char* filledTreeFileName = getTreeFileName(treeFileName);
+        registerIndexColumn(db, selectStmt, argv[2], filledTreeFileName);
+        rc = createIndex(2, params.indexDataSize, filledTreeFileName);
         sqlite3_finalize(selectStmt);
     }
 
@@ -90,10 +92,8 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* 
     return rc;
 }
 
-static int createIndex(int order, int keySize)
+static char* getTreeFileName(char* treeFileName)
 {
-    char treeFileName[100];
-
     char* treePrefix = "tree_";
     strcpy(treeFileName, treePrefix);
 
@@ -108,6 +108,11 @@ static int createIndex(int order, int keySize)
     char* treeFileExtension = ".btree";
     strcat(treeFileName, treeFileExtension);
 
+    return treeFileName;
+}
+
+static int createIndex(int order, int keySize, const char* treeFileName)
+{
     switch (params.bestIndex)
     {
         case 1: create(BaseBTree::TreeType::B_TREE, order, keySize, treeFileName); break;
@@ -120,7 +125,7 @@ static int createIndex(int order, int keySize)
     return 0;
 }
 
-static void registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, const char* tableName)
+static void registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, const char* tableName, const char* treeFileName)
 {
     const char* columnName = NULL;
 
@@ -136,7 +141,8 @@ static void registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, const char* tab
                                    "indexColNumber INTEGER, "
                                    "indexColName TEXT, "
                                    "indexDataType TEXT, "
-                                   "indexDataSize INTEGER);");
+                                   "indexDataSize INTEGER, "
+                                   "treeFileName TEXT);");
     char* createZSql = sqlite3_str_finish(createSql);
     sqlite3_stmt* createStmt = NULL;
     sqlite3_prepare_v2(db, createZSql, -1, &createStmt, 0);
@@ -155,12 +161,13 @@ static void registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, const char* tab
             params.indexDataType = dataType;
             params.indexDataSize = getDataSizeByType(dataType);
             params.bestIndex = 1;
+            params.treeFileName = treeFileName;
 
             sqlite3_str* insertSql = sqlite3_str_new(db);
             sqlite3_str_appendf(insertSql, "INSERT INTO btrees_mods_idxinfo "
-                                           "VALUES (\"%s\", %d, %d, \"%s\", \"%s\", %d);",
+                                           "VALUES (\"%s\", %d, %d, \"%s\", \"%s\", %d, \"%s\");",
                     tableName, params.bestIndex, params.indexColNumber, params.indexColName,
-                    params.indexDataType, params.indexDataSize);
+                    params.indexDataType, params.indexDataSize, treeFileName);
             char* insertZSql = sqlite3_str_finish(insertSql);
             sqlite3_stmt* insertStmt = NULL;
             sqlite3_prepare_v2(db, insertZSql, -1, &insertStmt, 0);

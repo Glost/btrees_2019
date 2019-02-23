@@ -52,7 +52,9 @@ static int btreesModsDestroy(sqlite3_vtab* pVtab);
 
 static char* getTreeFileName(char* treeFileName);
 
-static int createIndex(int order, int keySize, const char* treeFileName);
+static int createIndex(int order, int keySize);
+
+static int openIndex();
 
 static void registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, const char* tableName, const char* treeFileName);
 

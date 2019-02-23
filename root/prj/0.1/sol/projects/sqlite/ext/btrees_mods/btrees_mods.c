@@ -81,8 +81,28 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* 
         char treeFileName[100];
         char* filledTreeFileName = getTreeFileName(treeFileName);
         registerIndexColumn(db, selectStmt, argv[2], filledTreeFileName);
-        rc = createIndex(2, params.indexDataSize, filledTreeFileName);
+        rc = createIndex(2, params.indexDataSize);
         sqlite3_finalize(selectStmt);
+    }
+    else
+    {
+        sqlite3_str* getParamsSql = sqlite3_str_new(db);
+        sqlite3_str_appendf(getParamsSql, "SELECT * FROM btrees_mods_idxinfo WHERE tableName = \"%s\";", argv[2]);
+        char* getParamsZSql = sqlite3_str_finish(getParamsSql);
+        sqlite3_stmt* getParamsStmt = NULL;
+        sqlite3_prepare_v2(db, getParamsZSql, -1, &getParamsStmt, 0);
+        sqlite3_step(getParamsStmt);
+
+        params.bestIndex = sqlite3_column_int(getParamsStmt, 1);
+        params.indexColNumber = sqlite3_column_int(getParamsStmt, 2);
+        params.indexColName = (const char*) sqlite3_column_text(getParamsStmt, 3);
+        params.indexDataType = (const char*) sqlite3_column_text(getParamsStmt, 4);
+        params.indexDataSize = sqlite3_column_int(getParamsStmt, 5);
+        params.treeFileName = (const char*) sqlite3_column_text(getParamsStmt, 6);
+
+        rc = openIndex();
+
+        sqlite3_finalize(getParamsStmt);
     }
 
     rc = sqlite3_declare_vtab(db, zSql);
@@ -111,14 +131,28 @@ static char* getTreeFileName(char* treeFileName)
     return treeFileName;
 }
 
-static int createIndex(int order, int keySize, const char* treeFileName)
+static int createIndex(int order, int keySize)
 {
     switch (params.bestIndex)
     {
-        case 1: create(BaseBTree::TreeType::B_TREE, order, keySize, treeFileName); break;
-        case 2: create(BaseBTree::TreeType::B_PLUS_TREE, order, keySize, treeFileName); break;
-        case 3: create(BaseBTree::TreeType::B_STAR_TREE, order, keySize, treeFileName); break;
-        case 4: create(BaseBTree::TreeType::B_STAR_PLUS_TREE, order, keySize, treeFileName); break;
+        case 1: create(BaseBTree::TreeType::B_TREE, order, keySize, params.treeFileName); break;
+        case 2: create(BaseBTree::TreeType::B_PLUS_TREE, order, keySize, params.treeFileName); break;
+        case 3: create(BaseBTree::TreeType::B_STAR_TREE, order, keySize, params.treeFileName); break;
+        case 4: create(BaseBTree::TreeType::B_STAR_PLUS_TREE, order, keySize, params.treeFileName); break;
+        default: return -1;
+    }
+
+    return 0;
+}
+
+static int openIndex()
+{
+    switch (params.bestIndex)
+    {
+        case 1: open(BaseBTree::TreeType::B_TREE, params.treeFileName); break;
+        case 2: open(BaseBTree::TreeType::B_PLUS_TREE, params.treeFileName); break;
+        case 3: open(BaseBTree::TreeType::B_STAR_TREE, params.treeFileName); break;
+        case 4: open(BaseBTree::TreeType::B_STAR_PLUS_TREE, params.treeFileName); break;
         default: return -1;
     }
 

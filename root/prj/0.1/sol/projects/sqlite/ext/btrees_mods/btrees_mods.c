@@ -120,16 +120,73 @@ static int createIndex(int order, int keySize)
     return 0;
 }
 
-static sqlite3_module btreesModsModule = {
-        0, // iVersion
-        btreesModsCreate,
-        btreesModsConnect,
-        btreesModsBestIndex,
-        btreesModsDisconnect,
-        btreesModsDestroy,
-//        // TODO: complete the module implementation.
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
+static void registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, const char* tableName)
+{
+    const char* columnName = NULL;
+
+    const char* dataType = NULL;
+    const char* collSeq = NULL;
+
+    int notNull, primaryKey, autoInc;
+
+    sqlite3_str* createSql = sqlite3_str_new(db);
+    sqlite3_str_appendf(createSql, "CREATE TABLE IF NOT EXISTS btrees_mods_idxinfo("
+                                   "tableName TEXT PRIMARY KEY, "
+                                   "bestIndex INTEGER, "
+                                   "indexColNumber INTEGER, "
+                                   "indexColName TEXT, "
+                                   "indexDataType TEXT, "
+                                   "indexDataSize INTEGER);");
+    char* createZSql = sqlite3_str_finish(createSql);
+    sqlite3_stmt* createStmt = NULL;
+    sqlite3_prepare_v2(db, createZSql, -1, &createStmt, 0);
+    sqlite3_step(createStmt);
+    sqlite3_finalize(createStmt);
+
+    for (int i = 0; (columnName = sqlite3_column_name(stmt, i)) != NULL; ++i)
+    {
+        sqlite3_table_column_metadata(db, NULL, sqlite3_mprintf("%s_real", tableName), columnName, &dataType, &collSeq,
+                &notNull, &primaryKey, &autoInc);
+
+        if (primaryKey)
+        {
+            params.indexColNumber = i;
+            params.indexColName = columnName;
+            params.indexDataType = dataType;
+            params.indexDataSize = getDataSizeByType(dataType);
+            params.bestIndex = 1;
+
+            sqlite3_str* insertSql = sqlite3_str_new(db);
+            sqlite3_str_appendf(insertSql, "INSERT INTO btrees_mods_idxinfo "
+                                           "VALUES (\"%s\", %d, %d, \"%s\", \"%s\", %d);",
+                    tableName, params.bestIndex, params.indexColNumber, params.indexColName,
+                    params.indexDataType, params.indexDataSize);
+            char* insertZSql = sqlite3_str_finish(insertSql);
+            sqlite3_stmt* insertStmt = NULL;
+            sqlite3_prepare_v2(db, insertZSql, -1, &insertStmt, 0);
+            sqlite3_step(insertStmt);
+            sqlite3_finalize(insertStmt);
+
+            break;
+        }
+    }
+}
+
+static int getDataSizeByType(const char* dataType)
+{
+    if (strcmp(dataType, "INTEGER") == 0)
+        return 8;
+    else if (strcmp(dataType, "FLOAT") == 0)
+        return 8;
+    else if (strcmp(dataType, "TEXT") == 0)
+        return 8;
+    else if (strcmp(dataType, "BLOB") == 0)
+        return 1;
+    else if (strcmp(dataType, "NULL") == 0)
+        return 1;
+    else
+        return -1;
+}
 
 #ifdef __cplusplus
 extern "C" {

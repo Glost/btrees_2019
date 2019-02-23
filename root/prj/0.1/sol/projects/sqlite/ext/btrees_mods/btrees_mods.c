@@ -32,6 +32,7 @@ static int btreesModsBestIndex(sqlite3_vtab* tab, sqlite3_index_info* pIdxInfo)
 
 static int btreesModsDisconnect(sqlite3_vtab* pVtab)
 {
+    close();
     sqlite3_free(pVtab);
     return SQLITE_OK;
 }

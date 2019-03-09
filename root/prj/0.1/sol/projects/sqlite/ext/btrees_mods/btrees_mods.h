@@ -50,15 +50,35 @@ static int btreesModsDisconnect(sqlite3_vtab* pVtab);
 
 static int btreesModsDestroy(sqlite3_vtab* pVtab);
 
+static int btreesModsUpdate(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv, sqlite_int64* pRowid);
+
+static int btreesModsDoUpdate(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv, sqlite_int64* pRowid);
+
+static int btreesModsDoUpdateWithRowIdChange(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv, sqlite_int64* pRowid);
+
+static int btreesModsDelete(sqlite3_vtab* pVTab, sqlite_int64 rowId);
+
+static int btreesModsInsert(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv, sqlite_int64* pRowid);
+
+static int btreesModsOpen(sqlite3_vtab* pVTab, sqlite3_vtab_cursor** ppCursor);
+
+static int btreesModsClose(sqlite3_vtab_cursor* pCur);
+
+static int btreesModsRowid(sqlite3_vtab_cursor *pCur, sqlite_int64 *pRowid);
+
 static char* getTreeFileName(char* treeFileName);
 
 static int createIndex(int order, int keySize);
 
 static int openIndex();
 
-static void registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, const char* tableName, const char* treeFileName);
+static int registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, const char* tableName, const char* treeFileName);
 
 static int getDataSizeByType(const char* dataType);
+
+static int executeSqlAndFinalize(sqlite3* db, char* sql);
+
+static int executeSql(sqlite3* db, char* sql, sqlite3_stmt** stmt);
 
 void errorLogCallback(void* pArg, int iErrCode, const char* zMsg);
 
@@ -80,6 +100,17 @@ struct indexParams {
     const char* indexDataType;
     int indexDataSize;
     const char* treeFileName;
+};
+
+struct virtualTableInfo {
+    sqlite3_vtab base;
+    sqlite3* db;
+    const char* tableName;
+};
+
+struct btreesModsCursor {
+    sqlite3_vtab_cursor base;
+    sqlite_int64 rowId;
 };
 
 static indexParams params = {

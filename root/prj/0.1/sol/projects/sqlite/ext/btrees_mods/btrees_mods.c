@@ -44,6 +44,78 @@ static int btreesModsDestroy(sqlite3_vtab* pVtab)
     return SQLITE_OK;
 }
 
+static int btreesModsUpdate(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv, sqlite_int64* pRowid)
+{
+    if (argc == 1 && sqlite3_value_int64(argv[0]) != SQLITE_NULL)
+        return btreesModsDelete(pVTab, sqlite3_value_int64(argv[0]));
+    else if (argc > 1 && sqlite3_value_int64(argv[0]) == SQLITE_NULL)
+        return btreesModsInsert(pVTab, argc, argv, pRowid);
+    else if (argc > 1 && sqlite3_value_int64(argv[0]) != SQLITE_NULL &&
+        sqlite3_value_int64(argv[0]) == sqlite3_value_int64(argv[1]))
+        return btreesModsDoUpdate(pVTab, argc, argv, pRowid);
+    else if (argc > 1 && sqlite3_value_int64(argv[0]) != SQLITE_NULL &&
+        sqlite3_value_int64(argv[0]) != sqlite3_value_int64(argv[1]))
+        return btreesModsDoUpdateWithRowIdChange(pVTab, argc, argv, pRowid);
+    else
+        return -1;
+}
+
+static int btreesModsDoUpdate(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv, sqlite_int64* pRowid)
+{
+
+}
+
+static int btreesModsDoUpdateWithRowIdChange(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv, sqlite_int64* pRowid)
+{
+
+}
+
+static int btreesModsDelete(sqlite3_vtab* pVTab, sqlite_int64 rowId)
+{
+    int rc = SQLITE_OK;
+    virtualTableInfo* vTInfo = (virtualTableInfo*) pVTab;
+    sqlite3_str* pSql = sqlite3_str_new(vTInfo->db);
+    sqlite3_str_appendf(pSql, "DELETE FROM %s_real WHERE rowid = %s;", vTInfo->tableName, rowId);
+    rc = executeSqlAndFinalize(vTInfo->db, sqlite3_str_finish(pSql));
+
+    if (rc)
+        return rc;
+
+    return (int) removeKey((Byte*) rowId);
+}
+
+static int btreesModsInsert(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv, sqlite_int64* pRowid)
+{
+    virtualTableInfo* vTInfo = (virtualTableInfo*) pVTab;
+    sqlite3_str* pSql = sqlite3_str_new(vTInfo->db);
+//    sqlite3_str_appendf(pSql, "INSERT INTO %s_real VALUES ()")
+//    insert()
+}
+
+static int btreesModsOpen(sqlite3_vtab* pVTab, sqlite3_vtab_cursor** ppCursor)
+{
+    btreesModsCursor* cursor = (btreesModsCursor*) sqlite3_malloc(sizeof(btreesModsCursor));
+    memset(cursor, 0, sizeof(btreesModsCursor));
+    cursor->base.pVtab = pVTab;
+    cursor->rowId = 0;
+    *ppCursor = (sqlite3_vtab_cursor*) cursor;
+
+    return SQLITE_OK;
+}
+
+static int btreesModsClose(sqlite3_vtab_cursor* pCur)
+{
+    sqlite3_free(pCur);
+    return SQLITE_OK;
+}
+
+static int btreesModsRowid(sqlite3_vtab_cursor *pCur, sqlite_int64 *pRowid)
+{
+    btreesModsCursor* cursor = (btreesModsCursor*) pCur;
+    *pRowid = cursor->rowId;
+    return SQLITE_OK;
+}
+
 static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* argv,
         sqlite3_vtab** ppVTab, char** pzErr, int isCreate)
 {
@@ -61,15 +133,7 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* 
     sqlite3_str_appendf(pSql, ");");
     char* zSql = sqlite3_str_finish(pSql);
 
-    sqlite3_stmt* stmt = NULL;
-
-    if (!zSql)
-        rc = SQLITE_NOMEM;
-    else if (SQLITE_OK != (rc = sqlite3_prepare_v2(db, zSql, -1, &stmt, 0)))
-        *pzErr = sqlite3_mprintf("%s", sqlite3_errmsg(db));
-
-    rc = sqlite3_step(stmt);
-    rc = sqlite3_finalize(stmt);
+    executeSqlAndFinalize(db, zSql);
 
     if (isCreate)
     {
@@ -79,20 +143,30 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* 
         sqlite3_stmt* selectStmt = NULL;
         rc = sqlite3_prepare_v2(db, selectZSql, -1, &selectStmt, 0);
         *pzErr = sqlite3_mprintf("%s", sqlite3_errmsg(db));
+
+        if (rc)
+            return rc;
+
         char treeFileName[100];
         char* filledTreeFileName = getTreeFileName(treeFileName);
-        registerIndexColumn(db, selectStmt, argv[2], filledTreeFileName);
+        rc = registerIndexColumn(db, selectStmt, argv[2], filledTreeFileName);
+
+        if (rc)
+            return rc;
+
         rc = createIndex(2, params.indexDataSize);
+
+        if (rc)
+            return rc;
+
         sqlite3_finalize(selectStmt);
     }
     else
     {
         sqlite3_str* getParamsSql = sqlite3_str_new(db);
         sqlite3_str_appendf(getParamsSql, "SELECT * FROM btrees_mods_idxinfo WHERE tableName = \"%s\";", argv[2]);
-        char* getParamsZSql = sqlite3_str_finish(getParamsSql);
         sqlite3_stmt* getParamsStmt = NULL;
-        sqlite3_prepare_v2(db, getParamsZSql, -1, &getParamsStmt, 0);
-        sqlite3_step(getParamsStmt);
+        executeSql(db, sqlite3_str_finish(getParamsSql), &getParamsStmt);
 
         params.bestIndex = sqlite3_column_int(getParamsStmt, 1);
         params.indexColNumber = sqlite3_column_int(getParamsStmt, 2);
@@ -102,6 +176,9 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* 
         params.treeFileName = (const char*) sqlite3_column_text(getParamsStmt, 6);
 
         rc = openIndex();
+
+        if (rc)
+            return rc;
 
         sqlite3_finalize(getParamsStmt);
     }
@@ -160,8 +237,10 @@ static int openIndex()
     return 0;
 }
 
-static void registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, const char* tableName, const char* treeFileName)
+static int registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, const char* tableName, const char* treeFileName)
 {
+    int rc = SQLITE_OK;
+
     const char* columnName = NULL;
 
     const char* dataType = NULL;
@@ -178,16 +257,25 @@ static void registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, const char* tab
                                    "indexDataType TEXT, "
                                    "indexDataSize INTEGER, "
                                    "treeFileName TEXT);");
-    char* createZSql = sqlite3_str_finish(createSql);
-    sqlite3_stmt* createStmt = NULL;
-    sqlite3_prepare_v2(db, createZSql, -1, &createStmt, 0);
-    sqlite3_step(createStmt);
-    sqlite3_finalize(createStmt);
+    rc = executeSqlAndFinalize(db, sqlite3_str_finish(createSql));
+
+    if (rc)
+        return rc;
+
+    params.indexColNumber = -1;
+    params.indexColName = "rowid";
+    params.indexDataType = "INTEGER";
+    params.indexDataSize = getDataSizeByType(params.indexDataType);
+    params.bestIndex = 1;
+    params.treeFileName = treeFileName;
 
     for (int i = 0; (columnName = sqlite3_column_name(stmt, i)) != NULL; ++i)
     {
-        sqlite3_table_column_metadata(db, NULL, sqlite3_mprintf("%s_real", tableName), columnName, &dataType, &collSeq,
-                &notNull, &primaryKey, &autoInc);
+        rc = sqlite3_table_column_metadata(db, NULL, sqlite3_mprintf("%s_real", tableName), columnName,
+                &dataType, &collSeq, &notNull, &primaryKey, &autoInc);
+
+        if (rc)
+            return rc;
 
         if (primaryKey)
         {
@@ -195,23 +283,19 @@ static void registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, const char* tab
             params.indexColName = columnName;
             params.indexDataType = dataType;
             params.indexDataSize = getDataSizeByType(dataType);
-            params.bestIndex = 1;
-            params.treeFileName = treeFileName;
-
-            sqlite3_str* insertSql = sqlite3_str_new(db);
-            sqlite3_str_appendf(insertSql, "INSERT INTO btrees_mods_idxinfo "
-                                           "VALUES (\"%s\", %d, %d, \"%s\", \"%s\", %d, \"%s\");",
-                    tableName, params.bestIndex, params.indexColNumber, params.indexColName,
-                    params.indexDataType, params.indexDataSize, treeFileName);
-            char* insertZSql = sqlite3_str_finish(insertSql);
-            sqlite3_stmt* insertStmt = NULL;
-            sqlite3_prepare_v2(db, insertZSql, -1, &insertStmt, 0);
-            sqlite3_step(insertStmt);
-            sqlite3_finalize(insertStmt);
 
             break;
         }
     }
+
+    sqlite3_str* insertSql = sqlite3_str_new(db);
+    sqlite3_str_appendf(insertSql, "INSERT INTO btrees_mods_idxinfo "
+                                   "VALUES (\"%s\", %d, %d, \"%s\", \"%s\", %d, \"%s\");",
+                        tableName, params.bestIndex, params.indexColNumber, params.indexColName,
+                        params.indexDataType, params.indexDataSize, params.treeFileName);
+    rc = executeSqlAndFinalize(db, sqlite3_str_finish(insertSql));
+
+    return rc;
 }
 
 static int getDataSizeByType(const char* dataType)
@@ -228,6 +312,26 @@ static int getDataSizeByType(const char* dataType)
         return 1;
     else
         return -1;
+}
+
+static int executeSqlAndFinalize(sqlite3* db, char* sql)
+{
+    sqlite3_stmt* stmt = NULL;
+    int rc = executeSql(db, sql, &stmt);
+    sqlite3_finalize(stmt);
+    return rc;
+}
+
+static int executeSql(sqlite3* db, char* sql, sqlite3_stmt** stmt)
+{
+    int rc = SQLITE_OK;
+
+    if (!sql)
+        rc = SQLITE_NOMEM;
+    else if (SQLITE_OK == (rc = sqlite3_prepare_v2(db, sql, -1, stmt, 0)))
+        sqlite3_step(*stmt);
+
+    return rc;
 }
 
 #ifdef __cplusplus

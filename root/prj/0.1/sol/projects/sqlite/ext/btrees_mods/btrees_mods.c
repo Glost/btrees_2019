@@ -66,10 +66,8 @@ static int btreesModsFilter(sqlite3_vtab_cursor* cursor, int idxNum, const char*
     int rc = SQLITE_OK;
 
     btreesModsCursor* customCursor = (btreesModsCursor*) cursor;
-    customCursor->rowId = -1;
-    customCursor->idxStr = (char*) malloc(2 * argc);
-    strcpy(customCursor->idxStr, idxStr);
-    customCursor->argv = argv;
+    customCursor->rowsIdsCount = 0;
+    customCursor->currentRowIdIdx = -1;
 
     int i = 0;
     for ( ; i < argc; ++i)
@@ -79,7 +77,7 @@ static int btreesModsFilter(sqlite3_vtab_cursor* cursor, int idxNum, const char*
 
         rc = btreesModsHandleConstraint(customCursor, columnNum, operation, argv[i]);
 
-        if (customCursor->rowId >= 0)
+        if (customCursor->currentRowIdIdx >= 0)
             return rc;
 
         if (rc)
@@ -95,16 +93,24 @@ static int btreesModsNext(sqlite3_vtab_cursor* cursor)
 
     btreesModsCursor* customCursor = (btreesModsCursor*) cursor;
 
-    if (customCursor->rowId == -1)
+    if (customCursor->currentRowIdIdx == -1)
         return rc;
 
+    if (customCursor->currentRowIdIdx == customCursor->rowsIdsCount - 1)
+    {
+        customCursor->currentRowIdIdx = -1;
+        return rc;
+    }
 
+    ++customCursor->currentRowIdIdx;
+
+    return rc;
 }
 
 static int btreesModsEof(sqlite3_vtab_cursor* cursor)
 {
     btreesModsCursor* customCursor = (btreesModsCursor*) cursor;
-    return customCursor->rowId == -1;
+    return customCursor->currentRowIdIdx == -1;
 }
 
 static int btreesModsColumn(sqlite3_vtab_cursor* cursor, sqlite3_context* context, int n)
@@ -115,7 +121,8 @@ static int btreesModsColumn(sqlite3_vtab_cursor* cursor, sqlite3_context* contex
     virtualTableInfo* vTInfo = (virtualTableInfo*) cursor->pVtab;
 
     sqlite3_str* pSql = sqlite3_str_new(vTInfo->db);
-    sqlite3_str_appendf(pSql, "SELECT * FROM %s_real WHERE rowid = %d;", vTInfo->tableName, customCursor->rowId);
+    sqlite3_str_appendf(pSql, "SELECT * FROM %s_real WHERE rowid = %d;", vTInfo->tableName,
+            customCursor->rowsIds[customCursor->currentRowIdIdx]);
     sqlite3_stmt* stmt = NULL;
 
     rc = executeSql(vTInfo->db, sqlite3_str_finish(pSql), &stmt);
@@ -135,10 +142,21 @@ static int btreesModsHandleConstraint(btreesModsCursor* cursor, int columnNum, u
 
     if (columnNum == params.indexColNumber)
     {
-
+        switch (operation)
+        {
+            case SQLITE_INDEX_CONSTRAINT_EQ:
+                return btreesModsHandleConstraintEq(cursor, exprValue);
+        }
     }
 
     return rc;
+}
+
+static int btreesModsHandleConstraintEq(btreesModsCursor* cursor, sqlite3_value* exprValue)
+{
+    Byte* key = createTreeKey(exprValue);
+
+
 }
 
 static int btreesModsUpdate(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv, sqlite_int64* pRowid)
@@ -205,7 +223,7 @@ static int btreesModsOpen(sqlite3_vtab* pVTab, sqlite3_vtab_cursor** ppCursor)
     btreesModsCursor* cursor = (btreesModsCursor*) sqlite3_malloc(sizeof(btreesModsCursor));
     memset(cursor, 0, sizeof(btreesModsCursor));
     cursor->base.pVtab = pVTab;
-    cursor->rowId = 0;
+    cursor->currentRowIdIdx = -1;
     *ppCursor = (sqlite3_vtab_cursor*) cursor;
 
     return SQLITE_OK;
@@ -213,20 +231,19 @@ static int btreesModsOpen(sqlite3_vtab* pVTab, sqlite3_vtab_cursor** ppCursor)
 
 static int btreesModsClose(sqlite3_vtab_cursor* pCur)
 {
-    btreesModsCursor* customCursor = (btreesModsCursor*) pCur;
-
-    if (customCursor->idxStr)
-        free(customCursor->idxStr);
-
     sqlite3_free(pCur);
-
     return SQLITE_OK;
 }
 
 static int btreesModsRowid(sqlite3_vtab_cursor *pCur, sqlite_int64 *pRowid)
 {
     btreesModsCursor* cursor = (btreesModsCursor*) pCur;
-    *pRowid = cursor->rowId;
+
+    if (cursor->currentRowIdIdx == -1)
+        pRowid = NULL;
+    else
+        *pRowid = cursor->rowsIds[cursor->currentRowIdIdx];
+
     return SQLITE_OK;
 }
 
@@ -298,6 +315,14 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* 
     }
 
     rc = sqlite3_declare_vtab(db, zSql);
+
+    virtualTableInfo* vTInfo = (virtualTableInfo*) sqlite3_malloc(sizeof(virtualTableInfo));
+    vTInfo->base.pModule = &btreesModsModule;
+    vTInfo->base.nRef = 1;
+    vTInfo->base.zErrMsg = NULL;
+    vTInfo->db = db;
+    vTInfo->tableName = argv[2];
+    *ppVTab = (sqlite3_vtab*) vTInfo;
 
     sqlite3_free(zSql);
 

@@ -56,13 +56,9 @@ typedef struct virtualTableInfo virtualTableInfo;
 
 struct btreesModsCursor {
     sqlite3_vtab_cursor base;
-    sqlite_int64 rowId;
-
-    int lastPageNum;
-    int lastElemInPageNum;
-
-    char* idxStr;
-    sqlite3_value** argv;
+    sqlite_int64* rowsIds;
+    int currentRowIdIdx;
+    int rowsIdsCount;
 };
 
 typedef struct btreesModsCursor btreesModsCursor;
@@ -102,6 +98,8 @@ static int btreesModsColumn(sqlite3_vtab_cursor* cursor, sqlite3_context* contex
 
 static int btreesModsHandleConstraint(btreesModsCursor* cursor, int columnNum, unsigned char operation,
         sqlite3_value* exprValue);
+
+static int btreesModsHandleConstraintEq(btreesModsCursor* cursor, sqlite3_value* exprValue);
 
 static int btreesModsUpdate(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv, sqlite_int64* pRowid);
 
@@ -156,8 +154,24 @@ static sqlite3_module btreesModsModule = {
         btreesModsBestIndex,
         btreesModsDisconnect,
         btreesModsDestroy,
-//        // TODO: complete the module implementation.
-        0, 0, 0, 0, 0, 0, 0, btreesModsUpdate, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        btreesModsOpen,
+        btreesModsClose,
+        btreesModsFilter,
+        btreesModsNext,
+        btreesModsEof,
+        btreesModsColumn,
+        btreesModsRowid,
+        btreesModsUpdate,
+        NULL, // xBegin
+        NULL, // xSync
+        NULL, // xCommit
+        NULL, // xRollback
+        NULL, // xFindFunction
+        NULL, // TODO: xRename
+        NULL, // xSavepoint
+        NULL, // xRelease
+        NULL, // xRollbackTo
+        NULL  // xShadowName
 };
 
 #endif //BTREES_BTREES_MODS_H

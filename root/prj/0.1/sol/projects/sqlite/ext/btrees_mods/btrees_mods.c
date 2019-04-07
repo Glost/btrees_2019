@@ -161,14 +161,14 @@ static int btreesModsHandleConstraintEq(btreesModsCursor* cursor, sqlite3_value*
 
 static int btreesModsUpdate(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv, sqlite_int64* pRowid)
 {
-    if (argc == 1 && sqlite3_value_int64(argv[0]) != SQLITE_NULL)
+    if (argc == 1 && sqlite3_value_type(argv[0]) != SQLITE_NULL)
         return btreesModsDelete(pVTab, sqlite3_value_int64(argv[0]));
-    else if (argc > 1 && sqlite3_value_int64(argv[0]) == SQLITE_NULL)
+    else if (argc > 1 && sqlite3_value_type(argv[0]) == SQLITE_NULL)
         return btreesModsInsert(pVTab, argc, argv, pRowid);
-    else if (argc > 1 && sqlite3_value_int64(argv[0]) != SQLITE_NULL &&
+    else if (argc > 1 && sqlite3_value_type(argv[0]) != SQLITE_NULL &&
         sqlite3_value_int64(argv[0]) == sqlite3_value_int64(argv[1]))
         return btreesModsDoUpdate(pVTab, argc, argv, pRowid);
-    else if (argc > 1 && sqlite3_value_int64(argv[0]) != SQLITE_NULL &&
+    else if (argc > 1 && sqlite3_value_type(argv[0]) != SQLITE_NULL &&
         sqlite3_value_int64(argv[0]) != sqlite3_value_int64(argv[1]))
         return btreesModsDoUpdateWithRowIdChange(pVTab, argc, argv, pRowid);
     else

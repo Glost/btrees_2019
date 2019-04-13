@@ -38,10 +38,10 @@ int sqlite3_btreesmods_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_rout
 struct indexParams {
     int bestIndex;
     int indexColNumber;
-    const char* indexColName;
-    const char* indexDataType;
+    char* indexColName;
+    char* indexDataType;
     int indexDataSize;
-    const char* treeFileName;
+    char* treeFileName;
 };
 
 typedef struct indexParams indexParams;
@@ -135,17 +135,25 @@ static int executeSql(sqlite3* db, char* sql, sqlite3_stmt** stmt);
 
 static Byte* createTreeKey(sqlite3_value* primaryKeyValue);
 
-static Byte* createTreeKey(sqlite3_value* primaryKeyValue, int rowId);
+static Byte* createTreeKey(sqlite_int64 rowId);
 
-static Byte* createIntTreeKey(sqlite3_value* primaryKeyValue, int rowId);
+static Byte* createTreeKey(sqlite3_value* primaryKeyValue, sqlite_int64 rowId);
 
-static Byte* createFloatTreeKey(sqlite3_value* primaryKeyValue, int rowId);
+static Byte* createIntTreeKey(sqlite3_value* primaryKeyValue, sqlite_int64 rowId);
 
-static Byte* createTextTreeKey(sqlite3_value* primaryKeyValue, int rowId);
+static Byte* createFloatTreeKey(sqlite3_value* primaryKeyValue, sqlite_int64 rowId);
 
-static Byte* createBlobTreeKey(sqlite3_value* primaryKeyValue, int rowId);
+static Byte* createTextTreeKey(sqlite3_value* primaryKeyValue, sqlite_int64 rowId);
 
-void errorLogCallback(void* pArg, int iErrCode, const char* zMsg);
+static Byte* createBlobTreeKey(sqlite3_value* primaryKeyValue, sqlite_int64 rowId);
+
+static const char* convertSqliteValueToString(sqlite3_value* value);
+
+static const char* copyString(char** pDestination, const char* source);
+
+static void freeString(char** pString);
+
+static void freeParams(indexParams& paramsInstance);
 
 static sqlite3_module btreesModsModule = {
         0, // iVersion

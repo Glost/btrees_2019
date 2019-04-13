@@ -15,15 +15,17 @@
 
 using namespace btree;
 
-struct ByteComparator : public BaseBTree::IComparator {
+struct FirstPartByteComparator : public BaseBTree::IComparator {
+
+    UInt firstPartBytes = 0;
 
     virtual bool compare(const Byte* lhv, const Byte* rhv, UInt sz) override
     {
-        for (UInt i = 0; i < sz; ++i)
+        for (UInt i = 0; i < sz && i < firstPartBytes; ++i)
         {
-            if (*lhv < *rhv)
+            if (lhv[i] < rhv[i])
                 return true;
-            if (*lhv > *rhv)
+            if (lhv[i] > rhv[i])
                 return false;
         }
 
@@ -32,14 +34,46 @@ struct ByteComparator : public BaseBTree::IComparator {
 
     virtual bool isEqual(const Byte* lhv, const Byte* rhv, UInt sz) override
     {
-        for (UInt i = 0; i < sz; ++i)
-            if (*lhv != *rhv)
+        for (UInt i = 0; i < sz && i < firstPartBytes; ++i)
+            if (lhv[i] != rhv[i])
                 return false;
 
         return true;
     }
 
-}; // struct ByteComparator
+}; // struct FirstPartByteComparator
+
+typedef struct FirstPartByteComparator FirstPartByteComparator;
+
+struct SecondPartByteComparator : public BaseBTree::IComparator {
+
+    UInt firstPartBytes = 0;
+
+    virtual bool compare(const Byte* lhv, const Byte* rhv, UInt sz) override
+    {
+        for (UInt i = firstPartBytes; i < sz; ++i)
+        {
+            if (lhv[i] < rhv[i])
+                return true;
+            if (lhv[i] > rhv[i])
+                return false;
+        }
+
+        return false;
+    }
+
+    virtual bool isEqual(const Byte* lhv, const Byte* rhv, UInt sz) override
+    {
+        for (UInt i = firstPartBytes; i < sz; ++i)
+            if (lhv[i] != rhv[i])
+                return false;
+
+        return true;
+    }
+
+}; // struct SecondPartByteComparator
+
+typedef struct SecondPartByteComparator SecondPartByteComparator;
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,7 +81,9 @@ extern "C" {
 
 static FileBaseBTree* tree = nullptr;
 
-static ByteComparator comparator;
+static FirstPartByteComparator firstPartByteComparator;
+
+static SecondPartByteComparator secondPartByteComparator;
 
 static void create(BaseBTree::TreeType treeType, UShort order, UShort keySize, const char* treeFileName);
 
@@ -57,11 +93,15 @@ static void open(BaseBTree::TreeType treeType, const char* treeFileName);
 
 static void close();
 
+static void setFirstPartByteComparator() { tree->getTree()->setComparator(&firstPartByteComparator); }
+
+static void setSecondPartByteComparator() { tree->getTree()->setComparator(&secondPartByteComparator); }
+
 static void insert(const Byte* k) { tree->insert(k); }
 
 static Byte* search(const Byte* k) { return tree->search(k); }
 
-static int searchAll(const Byte* k, std::list<Byte*>& keys) { return tree->searchAll(k, keys); }
+static int searchAll(const Byte* k, Byte*** keysPointer);
 
 #ifdef BTREE_WITH_DELETION
 

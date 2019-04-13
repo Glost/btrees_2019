@@ -18,7 +18,7 @@ static void create(BaseBTree::TreeType treeType, UShort order, UShort keySize, c
 {
     close();
 
-    tree = new FileBaseBTree(treeType, order, keySize, &comparator, treeFileName);
+    tree = new FileBaseBTree(treeType, order, keySize, &firstPartByteComparator, treeFileName);
 }
 
 static void createBTree(UShort order, UShort keySize, const char* treeFileName)
@@ -30,7 +30,7 @@ static void open(BaseBTree::TreeType treeType, const char* treeFileName)
 {
     close();
 
-    tree = new FileBaseBTree(treeType, treeFileName, &comparator);
+    tree = new FileBaseBTree(treeType, treeFileName, &firstPartByteComparator);
 }
 
 static void close()
@@ -40,6 +40,20 @@ static void close()
         delete tree;
         tree = nullptr;
     }
+}
+
+static int searchAll(const Byte* k, Byte*** keysPointer)
+{
+    std::list<Byte*> keys;
+    int result = tree->searchAll(k, keys);
+
+    *keysPointer = (Byte**) malloc(sizeof(Byte*) * keys.size());
+
+    std::list<Byte*>::iterator iter = keys.begin();
+    for (int i = 0; i < keys.size() && iter != keys.end(); ++i, ++iter)
+        (*keysPointer)[i] = *iter;
+
+    return result;
 }
 
 #ifdef __cplusplus

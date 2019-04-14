@@ -241,11 +241,16 @@ static int btreesModsInsert(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv,
 {
     virtualTableInfo* vTInfo = (virtualTableInfo*) pVTab;
     sqlite3_str* pSql = sqlite3_str_new(vTInfo->db);
-    sqlite3_str_appendf(pSql, "INSERT INTO %s_real VALUES (%s", vTInfo->tableName, convertSqliteValueToString(argv[2]));
+    char* strValue = NULL;
+    convertSqliteValueToString(argv[2], &strValue);
+    sqlite3_str_appendf(pSql, "INSERT INTO %s_real VALUES (%s", vTInfo->tableName, strValue);
 
     int i = 3;
     for ( ; i < argc; ++i)
-        sqlite3_str_appendf(pSql, ", %s", convertSqliteValueToString(argv[i]));
+    {
+        convertSqliteValueToString(argv[i], &strValue);
+        sqlite3_str_appendf(pSql, ", %s", strValue);
+    }
 
     sqlite3_str_appendf(pSql, ");");
 
@@ -255,8 +260,10 @@ static int btreesModsInsert(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv,
         return rc;
 
     sqlite3_str* selectSql = sqlite3_str_new(vTInfo->db);
+    convertSqliteValueToString(argv[params.indexColNumber + 2], &strValue);
     sqlite3_str_appendf(selectSql, "SELECT rowid FROM %s_real WHERE %s = %s;", vTInfo->tableName, params.indexColName,
-            convertSqliteValueToString(argv[params.indexColNumber + 2]));
+            strValue);
+    free(strValue);
     sqlite3_stmt* stmt = NULL;
     rc = executeSql(vTInfo->db, sqlite3_str_finish(selectSql), &stmt);
 
@@ -503,7 +510,7 @@ static int getDataSizeByType(const char* dataType)
     else if (strcmp(dataType, "TEXT") == 0)
         return 8;
     else if (strcmp(dataType, "BLOB") == 0)
-        return -1;
+        return 8;
     else if (strcmp(dataType, "NULL") == 0)
         return 1;
     else
@@ -617,10 +624,11 @@ static Byte* createTextTreeKey(sqlite3_value* primaryKeyValue, sqlite_int64 rowI
     int size = sqlite3_value_bytes(primaryKeyValue);
     size = size >= 8 ? 8 : size;
 
-    Byte* treeKey = (Byte*) malloc(size + sizeof(sqlite_int64));
+    Byte* treeKey = (Byte*) malloc(8 + sizeof(sqlite_int64));
+    memset(treeKey, 0, 8 + sizeof(sqlite_int64));
 
     memcpy(treeKey, (Byte*) sqlite3_value_text(primaryKeyValue), size);
-    memcpy(&treeKey[size], (Byte*) &rowId, sizeof(sqlite_int64));
+    memcpy(&treeKey[8], (Byte*) &rowId, sizeof(sqlite_int64));
 
     return treeKey;
 }
@@ -630,27 +638,47 @@ static Byte* createBlobTreeKey(sqlite3_value* primaryKeyValue, sqlite_int64 rowI
     int size = sqlite3_value_bytes(primaryKeyValue);
     size = size >= 8 ? 8 : size;
 
-    Byte* treeKey = (Byte*) malloc(size + sizeof(sqlite_int64));
+    Byte* treeKey = (Byte*) malloc(8 + sizeof(sqlite_int64));
+    memset(treeKey, 0, 8 + sizeof(sqlite_int64));
 
     memcpy(treeKey, (Byte*) sqlite3_value_blob(primaryKeyValue), size);
-    memcpy(&treeKey[size], (Byte*) &rowId, sizeof(sqlite_int64));
+    memcpy(&treeKey[8], (Byte*) &rowId, sizeof(sqlite_int64));
 
     return treeKey;
 }
 
-static const char* convertSqliteValueToString(sqlite3_value* value)
+static void convertSqliteValueToString(sqlite3_value* value, char** pString)
 {
+    if (*pString)
+    {
+        free(*pString);
+        *pString = NULL;
+    }
+
+    *pString = (char*) malloc(256);
+
     switch (sqlite3_value_type(value))
     {
         case SQLITE_INTEGER:
         case SQLITE_FLOAT:
+            strcpy(*pString, (const char*) sqlite3_value_text(value));
+            break;
         case SQLITE_TEXT:
-            return (const char*) sqlite3_value_text(value);
+            convertSqliteTextValueToString(value, pString);
+            break;
         case SQLITE_BLOB:
-            return (const char*) sqlite3_value_blob(value);
+            strcpy(*pString, (const char*) sqlite3_value_blob(value));
+            break;
         case SQLITE_NULL:
-            return "NULL";
+            sprintf(*pString, "NULL");
+            break;
     }
+}
+
+static void convertSqliteTextValueToString(sqlite3_value* value, char** pString)
+{
+    snprintf(*pString, 255, "\"%s", (const char*) sqlite3_value_text(value));
+    strcat(*pString, "\"");
 }
 
 static const char* copyString(char** pDestination, const char* source)

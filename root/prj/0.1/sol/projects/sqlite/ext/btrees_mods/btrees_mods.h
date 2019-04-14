@@ -147,7 +147,9 @@ static Byte* createTextTreeKey(sqlite3_value* primaryKeyValue, sqlite_int64 rowI
 
 static Byte* createBlobTreeKey(sqlite3_value* primaryKeyValue, sqlite_int64 rowId);
 
-static const char* convertSqliteValueToString(sqlite3_value* value);
+static void convertSqliteValueToString(sqlite3_value* value, char** pString);
+
+static void convertSqliteTextValueToString(sqlite3_value* value, char** pString);
 
 static const char* copyString(char** pDestination, const char* source);
 

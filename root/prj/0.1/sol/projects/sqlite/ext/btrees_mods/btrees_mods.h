@@ -12,6 +12,7 @@
 #define BTREES_BTREES_MODS_H
 
 #include "stdlib.h"
+#include "stdio.h"
 #include "time.h"
 #include "string.h"
 #include "sqlite3ext.h"
@@ -38,39 +39,39 @@ int sqlite3_btreesmods_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_rout
 struct indexParams {
     int bestIndex;
     int indexColNumber;
-    char* indexColName;
-    char* indexDataType;
+    char* indexColName = NULL;
+    char* indexDataType = NULL;
     int indexDataSize;
-    char* treeFileName;
+    char* treeFileName = NULL;
 };
 
 typedef struct indexParams indexParams;
 
-struct virtualTableInfo {
+struct btreesModsVirtualTable {
     sqlite3_vtab base;
-    sqlite3* db;
-    const char* tableName;
+    sqlite3* db = NULL;
+    char* tableName = NULL;
+    FileBaseBTree* tree = NULL;
+    indexParams params = {
+            0,
+            -1,
+            NULL,
+            NULL,
+            0,
+            NULL
+    };
 };
 
-typedef struct virtualTableInfo virtualTableInfo;
+typedef struct btreesModsVirtualTable btreesModsVirtualTable;
 
 struct btreesModsCursor {
     sqlite3_vtab_cursor base;
-    sqlite_int64* rowsIds;
+    sqlite_int64* rowsIds = NULL;
     int currentRowIdIdx;
     int rowsIdsCount;
 };
 
 typedef struct btreesModsCursor btreesModsCursor;
-
-static indexParams params = {
-        0,
-        -1,
-        NULL,
-        NULL,
-        0,
-        NULL
-};
 
 static int btreesModsCreate(sqlite3* db, void* pAux, int argc, const char* const* argv,
         sqlite3_vtab** ppVTab, char** pzErr);
@@ -105,9 +106,7 @@ static int btreesModsUpdate(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv,
 
 static int btreesModsDoUpdate(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv, sqlite_int64* pRowid);
 
-static int btreesModsDoUpdateWithRowIdChange(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv, sqlite_int64* pRowid);
-
-static int btreesModsDelete(sqlite3_vtab* pVTab, sqlite_int64 rowId);
+static int btreesModsDelete(sqlite3_vtab* pVTab, sqlite3_value* primaryKeyValue);
 
 static int btreesModsInsert(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv, sqlite_int64* pRowid);
 
@@ -117,13 +116,16 @@ static int btreesModsClose(sqlite3_vtab_cursor* pCur);
 
 static int btreesModsRowid(sqlite3_vtab_cursor *pCur, sqlite_int64 *pRowid);
 
+static int btreesModsRename(sqlite3_vtab* pVtab, const char* zNew);
+
 static char* getTreeFileName(char* treeFileName);
 
-static int createIndex(int order, int keySize);
+static int createIndex(btreesModsVirtualTable* virtualTable, int order, int keySize);
 
-static int openIndex();
+static int openIndex(btreesModsVirtualTable* virtualTable);
 
-static int registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, const char* tableName, const char* treeFileName);
+static int registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, btreesModsVirtualTable* virtualTable,
+        const char* tableName, const char* treeFileName);
 
 static int getDataSizeByType(const char* dataType);
 
@@ -133,11 +135,11 @@ static int executeSqlAndFinalize(sqlite3* db, char* sql);
 
 static int executeSql(sqlite3* db, char* sql, sqlite3_stmt** stmt);
 
-static Byte* createTreeKey(sqlite3_value* primaryKeyValue);
+static Byte* createTreeKey(sqlite3_value* primaryKeyValue, btreesModsVirtualTable* virtualTable);
 
-static Byte* createTreeKey(sqlite_int64 rowId);
+static Byte* createTreeKey(sqlite_int64 rowId, btreesModsVirtualTable* virtualTable);
 
-static Byte* createTreeKey(sqlite3_value* primaryKeyValue, sqlite_int64 rowId);
+static Byte* createTreeKey(sqlite3_value* primaryKeyValue, sqlite_int64 rowId, btreesModsVirtualTable* virtualTable);
 
 static Byte* createIntTreeKey(sqlite3_value* primaryKeyValue, sqlite_int64 rowId);
 
@@ -155,7 +157,7 @@ static const char* copyString(char** pDestination, const char* source);
 
 static void freeString(char** pString);
 
-static void freeParams(indexParams& paramsInstance);
+static void freeParams(sqlite3_vtab* pVTab);
 
 static sqlite3_module btreesModsModule = {
         0, // iVersion
@@ -177,7 +179,7 @@ static sqlite3_module btreesModsModule = {
         NULL, // xCommit
         NULL, // xRollback
         NULL, // xFindFunction
-        NULL, // TODO: xRename
+        btreesModsRename,
         NULL, // xSavepoint
         NULL, // xRelease
         NULL, // xRollbackTo

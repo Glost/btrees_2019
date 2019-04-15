@@ -14,38 +14,39 @@
 extern "C" {
 #endif
 
-static void create(BaseBTree::TreeType treeType, UShort order, UShort keySize, const char* treeFileName)
+static void create(FileBaseBTree** pTree, BaseBTree::TreeType treeType,
+        UShort order, UShort keySize, const char* treeFileName)
 {
-    close();
+    close(pTree);
 
-    tree = new FileBaseBTree(treeType, order, keySize, &firstPartByteComparator, treeFileName);
+    *pTree = new FileBaseBTree(treeType, order, keySize, &byteComparator, treeFileName);
 }
 
-static void createBTree(UShort order, UShort keySize, const char* treeFileName)
+static void createBTree(FileBaseBTree** pTree, UShort order, UShort keySize, const char* treeFileName)
 {
-    create(BaseBTree::TreeType::B_TREE, order, keySize, treeFileName);
+    create(pTree, BaseBTree::TreeType::B_TREE, order, keySize, treeFileName);
 }
 
-static void open(BaseBTree::TreeType treeType, const char* treeFileName)
+static void open(FileBaseBTree** pTree, BaseBTree::TreeType treeType, const char* treeFileName)
 {
-    close();
+    close(pTree);
 
-    tree = new FileBaseBTree(treeType, treeFileName, &firstPartByteComparator);
+    *pTree = new FileBaseBTree(treeType, treeFileName, &byteComparator);
 }
 
-static void close()
+static void close(FileBaseBTree** pTree)
 {
-    if (tree != nullptr)
+    if (*pTree != nullptr)
     {
-        delete tree;
-        tree = nullptr;
+        delete *pTree;
+        *pTree = nullptr;
     }
 }
 
-static int searchAll(const Byte* k, Byte*** keysPointer)
+static int searchAll(FileBaseBTree** pTree, const Byte* k, Byte*** keysPointer)
 {
     std::list<Byte*> keys;
-    int result = tree->searchAll(k, keys);
+    int result = (*pTree)->searchAll(k, keys);
 
     *keysPointer = (Byte**) malloc(sizeof(Byte*) * keys.size());
 

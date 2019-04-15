@@ -15,7 +15,7 @@
 
 using namespace btree;
 
-struct FirstPartByteComparator : public BaseBTree::IComparator {
+struct ByteComparator : public BaseBTree::IComparator {
 
     UInt firstPartBytes = 0;
 
@@ -41,73 +41,36 @@ struct FirstPartByteComparator : public BaseBTree::IComparator {
         return true;
     }
 
-}; // struct FirstPartByteComparator
+}; // struct ByteComparator
 
-typedef struct FirstPartByteComparator FirstPartByteComparator;
-
-struct SecondPartByteComparator : public BaseBTree::IComparator {
-
-    UInt firstPartBytes = 0;
-
-    virtual bool compare(const Byte* lhv, const Byte* rhv, UInt sz) override
-    {
-        for (UInt i = firstPartBytes; i < sz; ++i)
-        {
-            if (lhv[i] < rhv[i])
-                return true;
-            if (lhv[i] > rhv[i])
-                return false;
-        }
-
-        return false;
-    }
-
-    virtual bool isEqual(const Byte* lhv, const Byte* rhv, UInt sz) override
-    {
-        for (UInt i = firstPartBytes; i < sz; ++i)
-            if (lhv[i] != rhv[i])
-                return false;
-
-        return true;
-    }
-
-}; // struct SecondPartByteComparator
-
-typedef struct SecondPartByteComparator SecondPartByteComparator;
+typedef struct ByteComparator ByteComparator;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-static FileBaseBTree* tree = nullptr;
+static ByteComparator byteComparator;
 
-static FirstPartByteComparator firstPartByteComparator;
+static void create(FileBaseBTree** pTree, BaseBTree::TreeType treeType,
+        UShort order, UShort keySize, const char* treeFileName);
 
-static SecondPartByteComparator secondPartByteComparator;
+static void createBTree(FileBaseBTree** pTree, UShort order, UShort keySize, const char* treeFileName);
 
-static void create(BaseBTree::TreeType treeType, UShort order, UShort keySize, const char* treeFileName);
+static void open(FileBaseBTree** pTree, BaseBTree::TreeType treeType, const char* treeFileName);
 
-static void createBTree(UShort order, UShort keySize, const char* treeFileName);
+static void close(FileBaseBTree** pTree);
 
-static void open(BaseBTree::TreeType treeType, const char* treeFileName);
+static void insert(FileBaseBTree** pTree, const Byte* k) { (*pTree)->insert(k); }
 
-static void close();
+static Byte* search(FileBaseBTree** pTree, const Byte* k) { return (*pTree)->search(k); }
 
-static void setFirstPartByteComparator() { tree->getTree()->setComparator(&firstPartByteComparator); }
-
-static void setSecondPartByteComparator() { tree->getTree()->setComparator(&secondPartByteComparator); }
-
-static void insert(const Byte* k) { tree->insert(k); }
-
-static Byte* search(const Byte* k) { return tree->search(k); }
-
-static int searchAll(const Byte* k, Byte*** keysPointer);
+static int searchAll(FileBaseBTree** pTree, const Byte* k, Byte*** keysPointer);
 
 #ifdef BTREE_WITH_DELETION
 
-static bool removeKey(const Byte* k) { return tree->remove(k); }
+static bool removeKey(FileBaseBTree** pTree, const Byte* k) { return (*pTree)->remove(k); }
 
-static int removeAll(const Byte* k) { return tree->removeAll(k); }
+static int removeAll(FileBaseBTree** pTree, const Byte* k) { return (*pTree)->removeAll(k); }
 
 #endif
 

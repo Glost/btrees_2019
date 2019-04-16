@@ -36,6 +36,28 @@ int sqlite3_btreesmods_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_rout
 }; // extern "C"
 #endif
 
+#define CHAR_BUFFER_SIZE 256
+
+#define BTREE_NUM 1
+#define BPLUSTREE_NUM 2
+#define BSTARTREE_NUM 3
+#define BSTARPLUSTREE_NUM 4
+
+#define INTEGER_SIZE 4
+#define FLOAT_SIZE 8
+#define TEXT_SIZE 256
+#define BLOB_SIZE 256
+#define NULL_SIZE 256
+
+#define ROWID_SIZE 8
+
+#define ERROR_CODE -1
+
+#define ROWID_IDX_EOF -1
+
+#define TRUE 1
+#define FALSE 0
+
 struct indexParams {
     int bestIndex;
     int indexColNumber;
@@ -106,7 +128,7 @@ static int btreesModsUpdate(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv,
 
 static int btreesModsDoUpdate(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv, sqlite_int64* pRowid);
 
-static int btreesModsDelete(sqlite3_vtab* pVTab, sqlite3_value* primaryKeyValue);
+static int btreesModsDelete(sqlite3_vtab* pVTab, sqlite3_value* primaryKeyValue, sqlite_int64* pRowid);
 
 static int btreesModsInsert(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv, sqlite_int64* pRowid);
 
@@ -130,6 +152,8 @@ static int registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, btreesModsVirtua
 static int getDataSizeByType(const char* dataType);
 
 static const char* getDataTypeByInt(int dataType);
+
+static sqlite3_int64 getRowId(btreesModsVirtualTable* virtualTable, sqlite3_value* primaryKeyValue);
 
 static int executeSqlAndFinalize(sqlite3* db, char* sql);
 

@@ -45,11 +45,39 @@ struct ByteComparator : public BaseBTree::IComparator {
 
 typedef struct ByteComparator ByteComparator;
 
+struct SearchAllByteComparator : public BaseBTree::IComparator {
+
+    UInt firstPartBytes = 0;
+
+    virtual bool compare(const Byte* lhv, const Byte* rhv, UInt sz) override
+    {
+        for (UInt i = 0; i < sz && i < firstPartBytes; ++i)
+        {
+            if (lhv[i] < rhv[i])
+                return true;
+            if (lhv[i] > rhv[i])
+                return false;
+        }
+
+        return false;
+    }
+
+    virtual bool isEqual(const Byte* lhv, const Byte* rhv, UInt sz) override
+    {
+        return true;
+    }
+
+}; // struct SearchAllByteComparator
+
+typedef struct SearchAllByteComparator SearchAllByteComparator;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 static ByteComparator byteComparator;
+
+static SearchAllByteComparator searchAllByteComparator;
 
 static void create(FileBaseBTree** pTree, BaseBTree::TreeType treeType,
         UShort order, UShort keySize, const char* treeFileName);
@@ -59,6 +87,11 @@ static void createBTree(FileBaseBTree** pTree, UShort order, UShort keySize, con
 static void open(FileBaseBTree** pTree, BaseBTree::TreeType treeType, const char* treeFileName);
 
 static void close(FileBaseBTree** pTree);
+
+static void setByteComparator(FileBaseBTree** pTree) { (*pTree)->getTree()->setComparator(&byteComparator); }
+
+static void setSearchAllByteComparator(FileBaseBTree** pTree)
+        { (*pTree)->getTree()->setComparator(&searchAllByteComparator); }
 
 static void insert(FileBaseBTree** pTree, const Byte* k) { (*pTree)->insert(k); }
 

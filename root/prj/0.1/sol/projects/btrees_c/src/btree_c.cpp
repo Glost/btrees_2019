@@ -9,39 +9,3 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "btree_c.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-static void create(BaseBTree::TreeType treeType, UShort order, UShort keySize, const char* treeFileName)
-{
-    close();
-
-    tree = new FileBaseBTree(treeType, order, keySize, &comparator, treeFileName);
-}
-
-static void createBTree(UShort order, UShort keySize, const char* treeFileName)
-{
-    create(BaseBTree::TreeType::B_TREE, order, keySize, treeFileName);
-}
-
-static void open(BaseBTree::TreeType treeType, const char* treeFileName)
-{
-    close();
-
-    tree = new FileBaseBTree(treeType, treeFileName, &comparator);
-}
-
-static void close()
-{
-    if (tree != nullptr)
-    {
-        delete tree;
-        tree = nullptr;
-    }
-}
-
-#ifdef __cplusplus
-} // extern "C"
-#endif

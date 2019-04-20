@@ -58,6 +58,12 @@ int sqlite3_btreesmods_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_rout
 #define TRUE 1
 #define FALSE 0
 
+#define TREE_ORDER 200
+
+#define REBUILD_COEF 0.25
+#define REBUILD_COUNT 1000
+#define REBUILD_MAX_COUNT 10000
+
 struct indexParams {
     int bestIndex;
     int indexColNumber;
@@ -69,18 +75,33 @@ struct indexParams {
 
 typedef struct indexParams indexParams;
 
+struct indexStats {
+    int searchesCount;
+    int insertsCount;
+    int deletesCount;
+    int isOriginalStats;
+};
+
+typedef struct indexStats indexStats;
+
 struct btreesModsVirtualTable {
     sqlite3_vtab base;
     sqlite3* db = NULL;
     char* tableName = NULL;
     FileBaseBTree* tree = NULL;
     indexParams params = {
-            0,
+            BTREE_NUM,
             -1,
             NULL,
             NULL,
             0,
             NULL
+    };
+    indexStats stats = {
+            0,
+            0,
+            0,
+            FALSE
     };
 };
 
@@ -182,6 +203,10 @@ static const char* copyString(char** pDestination, const char* source);
 static void freeString(char** pString);
 
 static void freeParams(sqlite3_vtab* pVTab);
+
+static void rebuildIndexIfNecessary(btreesModsVirtualTable* virtualTable);
+
+static void rebuildIndex(btreesModsVirtualTable* virtualTable);
 
 static sqlite3_module btreesModsModule = {
         0, // iVersion

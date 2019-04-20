@@ -1,6 +1,8 @@
 add_library(btrees_c
         btree_c.h
-        btree_c.cpp)
+        btree_c.hpp
+        btree_c.cpp
+)
 
 find_package(btrees_lib REQUIRED PATHS "../../../lib/btrees_lib")
 target_link_libraries(btrees_c "${BTREES_LIB}")

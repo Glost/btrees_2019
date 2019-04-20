@@ -26,10 +26,8 @@ static int btreesModsBestIndex(sqlite3_vtab* tab, sqlite3_index_info* pIdxInfo)
 {
     int rc = SQLITE_OK;
 
-    pIdxInfo->idxNum = BTREE_NUM;
-
     btreesModsVirtualTable* virtualTable = (btreesModsVirtualTable*) tab;
-    virtualTable->params.bestIndex = pIdxInfo->idxNum;
+    pIdxInfo->idxNum = virtualTable->params.bestIndex;
 
     pIdxInfo->idxStr = (char*) sqlite3_malloc(2 * pIdxInfo->nConstraint);
 
@@ -191,6 +189,7 @@ static int btreesModsHandleConstraintEq(btreesModsCursor* cursor, sqlite3_value*
 
     Byte** keys = NULL;
     int keysCount = searchAll(&virtualTable->tree, searchedKey, &keys);
+    ++virtualTable->stats.searchesCount;
 
     cursor->rowsIdsCount = keysCount;
 
@@ -269,12 +268,16 @@ static int btreesModsDoUpdate(sqlite3_vtab* pVTab, int argc, sqlite3_value** arg
         byteComparator.firstPartBytes = virtualTable->params.indexDataSize;
 
         rc = (int) !removeKey(&virtualTable->tree, createTreeKey(argv[0], virtualTable));
+        ++virtualTable->stats.searchesCount;
+        ++virtualTable->stats.deletesCount;
 
         if (rc)
             return rc;
 
         insert(&virtualTable->tree, createTreeKey(argv[virtualTable->params.indexColNumber + 2],
                 *pRowid, virtualTable));
+        ++virtualTable->stats.searchesCount;
+        ++virtualTable->stats.insertsCount;
     }
 
     return rc;
@@ -300,6 +303,8 @@ static int btreesModsDelete(sqlite3_vtab* pVTab, sqlite3_value* primaryKeyValue,
     byteComparator.firstPartBytes = virtualTable->params.indexDataSize;
 
     rc = (int) !removeKey(&virtualTable->tree, createTreeKey(primaryKeyValue, virtualTable));
+    ++virtualTable->stats.searchesCount;
+    ++virtualTable->stats.deletesCount;
 
     *pRowid = getRowId(virtualTable, primaryKeyValue);
 
@@ -333,6 +338,8 @@ static int btreesModsInsert(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv,
     byteComparator.firstPartBytes = virtualTable->params.indexDataSize;
 
     insert(&virtualTable->tree, createTreeKey(argv[virtualTable->params.indexColNumber + 2], *pRowid, virtualTable));
+    ++virtualTable->stats.searchesCount;
+    ++virtualTable->stats.insertsCount;
 
     return rc;
 }
@@ -431,9 +438,15 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* 
     virtualTable->params.indexColName = NULL;
     virtualTable->params.indexDataType = NULL;
     virtualTable->params.treeFileName = NULL;
+    virtualTable->stats.searchesCount = 0;
+    virtualTable->stats.insertsCount = 0;
+    virtualTable->stats.deletesCount = 0;
+    virtualTable->stats.isOriginalStats = FALSE;
 
     if (isCreate)
     {
+        virtualTable->stats.isOriginalStats = TRUE;
+
         rc = executeSqlAndFinalize(db, zRealSql);
 
         if (rc)
@@ -457,7 +470,7 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* 
         if (rc)
             return rc;
 
-        rc = createIndex(virtualTable, 2, virtualTable->params.indexDataSize + sizeof(sqlite_int64));
+        rc = createIndex(virtualTable, TREE_ORDER, virtualTable->params.indexDataSize + sizeof(sqlite_int64));
 
         if (rc)
             return rc;
@@ -510,7 +523,7 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* 
 
 static char* getTreeFileName(char* treeFileName)
 {
-    char* treePrefix = "tree_";
+    const char* treePrefix = "tree_";
     strcpy(treeFileName, treePrefix);
 
     char treeRandomId[CHAR_BUFFER_SIZE];
@@ -518,10 +531,10 @@ static char* getTreeFileName(char* treeFileName)
     strcat(treeFileName, treeRandomId);
 
     char treeTimeStamp[CHAR_BUFFER_SIZE];
-    sprintf(treeTimeStamp, "%d", time(NULL));
+    sprintf(treeTimeStamp, "%d", (int) time(NULL));
     strcat(treeFileName, treeTimeStamp);
 
-    char* treeFileExtension = ".btree";
+    const char* treeFileExtension = ".btree";
     strcat(treeFileName, treeFileExtension);
 
     return treeFileName;
@@ -607,7 +620,7 @@ static int registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, btreesModsVirtua
     copyString(&virtualTable->params.indexColName, "rowid");
     copyString(&virtualTable->params.indexDataType, "INTEGER");
     virtualTable->params.indexDataSize = getDataSizeByType(virtualTable->params.indexDataType);
-    virtualTable->params.bestIndex = 1;
+    virtualTable->params.bestIndex = BTREE_NUM;
     copyString(&virtualTable->params.treeFileName, treeFileName);
 
     int i = 0;
@@ -875,6 +888,50 @@ static void freeParams(sqlite3_vtab* pVTab)
     free(virtualTable->tableName);
 
     sqlite3_free(pVTab);
+}
+
+static void rebuildIndexIfNecessary(btreesModsVirtualTable* virtualTable)
+{
+    int updatesCount = virtualTable->stats.insertsCount + virtualTable->stats.deletesCount;
+    int totalOperationsCount = updatesCount + virtualTable->stats.searchesCount;
+
+    if (!virtualTable->stats.isOriginalStats)
+        return;
+
+    if (totalOperationsCount > REBUILD_MAX_COUNT)
+        return;
+
+    if (totalOperationsCount % REBUILD_COUNT != 0)
+        return;
+
+    if (updatesCount < REBUILD_COEF * totalOperationsCount)
+        return;
+
+    if (virtualTable->stats.insertsCount > (1 - REBUILD_COEF) * updatesCount)
+        virtualTable->params.bestIndex = BSTARTREE_NUM;
+    else if (virtualTable->stats.insertsCount >= REBUILD_COEF * updatesCount)
+        virtualTable->params.bestIndex = BSTARPLUSTREE_NUM;
+    else
+        virtualTable->params.bestIndex = BPLUSTREE_NUM;
+
+    rebuildIndex(virtualTable);
+}
+
+static void rebuildIndex(btreesModsVirtualTable* virtualTable)
+{
+    setSearchAllByteComparator(&virtualTable->tree);
+    Byte** keys = NULL;
+    int keysCount = searchAll(&virtualTable->tree, createTreeKey((sqlite_int64) 0, virtualTable), &keys);
+    setByteComparator(&virtualTable->tree);
+
+    close(&virtualTable->tree);
+    remove(virtualTable->params.treeFileName);
+
+    createIndex(virtualTable, TREE_ORDER, virtualTable->params.indexDataSize);
+
+    int i = 0;
+    for ( ; i < keysCount; ++i)
+        insert(&virtualTable->tree, keys[i]);
 }
 
 #ifdef __cplusplus

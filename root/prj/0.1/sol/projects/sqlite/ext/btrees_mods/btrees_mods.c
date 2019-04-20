@@ -2,7 +2,7 @@
 /// \brief     B-tree and modifications SQLite extension.
 /// \authors   Anton Rigin
 /// \version   0.1.0
-/// \date      03.01.2019 -- 03.01.2019
+/// \date      03.01.2019 -- 20.04.2019
 ///            The bachelor thesis of Anton Rigin,
 ///            the HSE Software Engineering 4-th year bachelor student.
 ///
@@ -861,7 +861,7 @@ static void convertSqliteTextValueToString(sqlite3_value* value, char** pString)
     strcat(*pString, "\"");
 }
 
-static const char* copyString(char** pDestination, const char* source)
+static void copyString(char** pDestination, const char* source)
 {
     if (*pDestination)
         freeString(pDestination);
@@ -912,6 +912,8 @@ static void rebuildIndexIfNecessary(btreesModsVirtualTable* virtualTable)
     if (updatesCount < REBUILD_COEF * totalOperationsCount)
         return;
 
+    int oldBestIndex = virtualTable->params.bestIndex;
+
     if (virtualTable->stats.insertsCount > (1 - REBUILD_COEF) * updatesCount)
         virtualTable->params.bestIndex = BSTARTREE_NUM;
     else if (virtualTable->stats.insertsCount >= REBUILD_COEF * updatesCount)
@@ -919,11 +921,13 @@ static void rebuildIndexIfNecessary(btreesModsVirtualTable* virtualTable)
     else
         virtualTable->params.bestIndex = BPLUSTREE_NUM;
 
-    rebuildIndex(virtualTable);
+    if (virtualTable->params.bestIndex != oldBestIndex)
+        rebuildIndex(virtualTable);
 }
 
 static void rebuildIndex(btreesModsVirtualTable* virtualTable)
 {
+    searchAllByteComparator.firstPartBytes = virtualTable->params.indexDataSize;
     setSearchAllByteComparator(&virtualTable->tree);
     Byte** keys = NULL;
     int keysCount = searchAll(&virtualTable->tree, createTreeKey((sqlite_int64) 0, virtualTable), &keys);

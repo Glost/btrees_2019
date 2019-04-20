@@ -2,7 +2,7 @@
 /// \brief     B-tree and modifications C-API.
 /// \authors   Anton Rigin
 /// \version   0.1.0
-/// \date      22.12.2018 -- 22.12.2018
+/// \date      22.12.2018 -- 20.04.2019
 ///            The bachelor thesis of Anton Rigin,
 ///            the HSE Software Engineering 4-th year bachelor student.
 ///

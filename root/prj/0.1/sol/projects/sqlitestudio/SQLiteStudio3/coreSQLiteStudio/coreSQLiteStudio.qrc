@@ -1,0 +1,31 @@
+<RCC>
+    <qresource prefix="/forms">
+        <file>plugins/populatesequence.ui</file>
+        <file>plugins/populaterandomtext.ui</file>
+        <file>plugins/populatedictionary.ui</file>
+        <file>plugins/populateconstant.ui</file>
+        <file>plugins/populaterandom.ui</file>
+        <file>plugins/populatescript.ui</file>
+    </qresource>
+    <qresource prefix="/images">
+        <file>plugins/scriptingsql.png</file>
+        <file>plugins/scriptingqt.png</file>
+    </qresource>
+    <qresource prefix="/docs">
+        <file>licenses/fugue_icons.txt</file>
+        <file>licenses/sqlitestudio_license.txt</file>
+        <file>licenses/lgpl.txt</file>
+        <file>licenses/diff_match.txt</file>
+        <file>licenses/gpl.txt</file>
+        <file>licenses/mit.txt</file>
+    </qresource>
+    <qresource prefix="/msg">
+        <file>translations/coreSQLiteStudio_ro_RO.qm</file>
+        <file>translations/coreSQLiteStudio_pl.qm</file>
+        <file>translations/coreSQLiteStudio_ru.qm</file>
+        <file>translations/coreSQLiteStudio_fr.qm</file>
+        <file>translations/coreSQLiteStudio_sk.qm</file>
+        <file>translations/coreSQLiteStudio_zh_CN.qm</file>
+        <file>translations/coreSQLiteStudio_de.qm</file>
+    </qresource>
+</RCC>

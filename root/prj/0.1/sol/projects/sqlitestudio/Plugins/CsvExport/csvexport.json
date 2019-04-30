@@ -1,0 +1,7 @@
+{
+    "type":        "ExportPlugin",
+    "title":       "CSV export",
+    "description": "Provides CSV format for exporting",
+    "version":     10005,
+    "author":      "SalSoft"
+}

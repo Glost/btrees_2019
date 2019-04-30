@@ -1,0 +1,7 @@
+{
+    "type":        "CodeFormatterPlugin",
+    "title":       "SQL Enterprise",
+    "description": "Advanced SQL formatter.",
+    "version":     10006,
+    "author":      "SalSoft"
+}

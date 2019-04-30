@@ -1,0 +1,20 @@
+<RCC>
+    <qresource prefix="/forms">
+        <file>sqlenterpriseformatter.ui</file>
+    </qresource>
+    <qresource prefix="/msg">
+        <file>SqlEnterpriseFormatter_ro_RO.qm</file>
+        <file>SqlEnterpriseFormatter_de.qm</file>
+
+
+        <file>SqlEnterpriseFormatter_pl.qm</file>
+        <file>SqlEnterpriseFormatter_ru.qm</file>
+        <file>SqlEnterpriseFormatter_fr.qm</file>
+        <file>SqlEnterpriseFormatter_sk.qm</file>
+        <file>SqlEnterpriseFormatter_zh_CN.qm</file>
+    </qresource>
+</RCC>
+
+
+
+

@@ -1,0 +1,20 @@
+<RCC>
+    <qresource prefix="/forms">
+        <file>regexpimport.ui</file>
+    </qresource>
+    <qresource prefix="/msg">
+        <file>RegExpImport_ro_RO.qm</file>
+        <file>RegExpImport_de.qm</file>
+
+
+        <file>RegExpImport_pl.qm</file>
+        <file>RegExpImport_ru.qm</file>
+        <file>RegExpImport_fr.qm</file>
+        <file>RegExpImport_sk.qm</file>
+        <file>RegExpImport_zh_CN.qm</file>
+    </qresource>
+</RCC>
+
+
+
+

@@ -1,0 +1,12 @@
+#ifndef BTREESMODS_GLOBAL_H
+#define BTREESMODS_GLOBAL_H
+
+#include <QtCore/qglobal.h>
+
+#if defined(BTREESMODS_LIBRARY)
+#  define BTREESMODSSHARED_EXPORT Q_DECL_EXPORT
+#else
+#  define BTREESMODSSHARED_EXPORT Q_DECL_IMPORT
+#endif
+
+#endif // BTREESMODS_GLOBAL_H

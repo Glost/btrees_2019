@@ -1,0 +1,18 @@
+<RCC>
+    <qresource prefix="/forms">
+        <file>CsvExport.ui</file>
+    </qresource>
+    <qresource prefix="/msg">
+        <file>CsvExport_ro_RO.qm</file>
+
+        <file>CsvExport_de.qm</file>
+        <file>CsvExport_pl.qm</file>
+        <file>CsvExport_ru.qm</file>
+        <file>CsvExport_fr.qm</file>
+        <file>CsvExport_sk.qm</file>
+        <file>CsvExport_zh_CN.qm</file>
+    </qresource>
+</RCC>
+
+
+

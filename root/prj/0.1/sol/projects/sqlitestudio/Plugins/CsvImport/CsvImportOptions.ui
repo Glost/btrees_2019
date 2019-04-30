@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>csvImportOptions</class>
+ <widget class="QWidget" name="csvImportOptions">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>365</width>
+    <height>106</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string notr="true">Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="1" column="1">
+    <widget class="QComboBox" name="separatorCombo">
+     <property name="cfg" stdset="0">
+      <string notr="true">CsvImport.Separator</string>
+     </property>
+     <item>
+      <property name="text">
+       <string>, (comma)</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>; (semicolon)</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>\t (tab)</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>  (whitespace)</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Custom:</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="0" column="0" colspan="3">
+    <widget class="QCheckBox" name="firstRowAsColumnsCheck">
+     <property name="toolTip">
+      <string>&lt;p&gt;Enable this if the first data line in your CSV file represents column names. You don't want column names to be imported into the table as a regular data.&lt;/p&gt;</string>
+     </property>
+     <property name="text">
+      <string>First line represents CSV column names</string>
+     </property>
+     <property name="cfg" stdset="0">
+      <string notr="true">CsvImport.FirstRowAsColumns</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="separatorLabel">
+     <property name="text">
+      <string>Field separator:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="2">
+    <widget class="QLineEdit" name="separatorEdit">
+     <property name="maximumSize">
+      <size>
+       <width>30</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="cfg" stdset="0">
+      <string notr="true">CsvImport.CustomSeparator</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QCheckBox" name="nullCheck">
+     <property name="toolTip">
+      <string>If enabled, then text value provided on the right will be interpreted as NULL</string>
+     </property>
+     <property name="text">
+      <string>NULL values:</string>
+     </property>
+     <property name="cfg" stdset="0">
+      <string notr="true">CsvImport.NullValues</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1" colspan="2">
+    <widget class="QLineEdit" name="nullEdit">
+     <property name="toolTip">
+      <string>If your CSV data contains null values, define how are they represented in the CSV.</string>
+     </property>
+     <property name="cfg" stdset="0">
+      <string notr="true">CsvImport.NullValueString</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

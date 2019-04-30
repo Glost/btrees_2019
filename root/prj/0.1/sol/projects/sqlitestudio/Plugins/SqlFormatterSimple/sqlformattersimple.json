@@ -1,0 +1,8 @@
+{
+    "type":        "CodeFormatterPlugin",
+    "title":       "SQL Simple",
+    "description": "Basic formatter with very little options.",
+    "version":     10001,
+    "author":      "SalSoft",
+    "loadByDefault": false
+}

@@ -1,0 +1,20 @@
+<RCC>
+    <qresource prefix="/forms">
+        <file>SqlFormatterSimple.ui</file>
+    </qresource>
+    <qresource prefix="/msg">
+        <file>SqlFormatterSimple_ro_RO.qm</file>
+        <file>SqlFormatterSimple_de.qm</file>
+
+
+        <file>SqlFormatterSimple_pl.qm</file>
+        <file>SqlFormatterSimple_ru.qm</file>
+        <file>SqlFormatterSimple_fr.qm</file>
+        <file>SqlFormatterSimple_sk.qm</file>
+        <file>SqlFormatterSimple_zh_CN.qm</file>
+    </qresource>
+</RCC>
+
+
+
+

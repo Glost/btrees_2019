@@ -1,5 +1,5 @@
 {
-    "type":        "BtreesModsPlugin",
+    "type":        "GeneralPurposePlugin",
     "title":       "B-tree and its modifications",
     "description": "Visualizes the btrees_mods SQLite extension's data",
     "version":     1,

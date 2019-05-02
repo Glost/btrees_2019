@@ -4,9 +4,9 @@
 #
 #-------------------------------------------------
 
-QT       -= gui
-
 include($$PWD/../../SQLiteStudio3/plugins.pri)
+
+QT += printsupport
 
 TARGET = BtreesMods
 TEMPLATE = lib

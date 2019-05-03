@@ -1,7 +1,0 @@
-{
-    "type":        "ExportPlugin",
-    "title":       "SQL export",
-    "description": "Provides SQL format for exporting",
-    "version":     10102,
-    "author":      "SalSoft"
-}

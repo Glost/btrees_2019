@@ -1,8 +1,0 @@
-{
-    "type":          "DbPlugin",
-    "title":         "WxSQLite3",
-    "description":   "Provides support for WxSQLite3 databases, including encryption.",
-    "minAppVersion": 30101,
-    "version":       10001,
-    "author":        "SalSoft"
-}

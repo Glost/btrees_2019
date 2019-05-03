@@ -3,6 +3,7 @@
 
 #include <btreesmods_global.h>
 #include "config_builder.h"
+#include "common/extactioncontainer.h"
 #include "plugins/genericplugin.h"
 #include "plugins/generalpurposeplugin.h"
 #include "plugins/uiconfiguredplugin.h"
@@ -25,7 +26,10 @@ public:
     BtreesMods();
 
     bool init();
+
     void deinit();
+
+    void bTreeVisualizeRequested(ExtActionContainer* actionContainer);
 
 };
 

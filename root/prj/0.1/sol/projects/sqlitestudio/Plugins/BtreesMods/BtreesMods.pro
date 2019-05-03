@@ -14,11 +14,16 @@ TEMPLATE = lib
 DEFINES += BTREESMODS_LIBRARY
 
 SOURCES += \
-        btreesmods.cpp
+        btreesmods.cpp \
+        btreesmodsdialog.cpp
 
 HEADERS += \
         btreesmods.h \
-        btreesmods_global.h 
+        btreesmods_global.h  \
+        btreesmodsdialog.h
 
 OTHER_FILES += \
     btreesmods.json
+
+FORMS += \
+    btreesmodsdialog.ui

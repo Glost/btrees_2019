@@ -617,6 +617,14 @@ static void rebuildIndexIfNecessary(btreesModsVirtualTable* virtualTable);
  */
 static void rebuildIndex(btreesModsVirtualTable* virtualTable);
 
+static void btreesModsVisualize(sqlite3_context* ctx, int argc, sqlite3_value** argv);
+
+static void btreesModsGetTreeOrder(sqlite3_context* ctx, int argc, sqlite3_value** argv);
+
+static void btreesModsGetTreeType(sqlite3_context* ctx, int argc, sqlite3_value** argv);
+
+static void openTreeForTable(FileBaseBTree** pTree, sqlite3* db, const char* tableName);
+
 /**
  * The btrees_mods SQLite module.
  */

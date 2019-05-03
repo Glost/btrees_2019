@@ -83,6 +83,25 @@ struct SearchAllByteComparator : public BaseBTree::IComparator {
 
 typedef struct SearchAllByteComparator SearchAllByteComparator;
 
+struct BytePrinter : public BaseBTree::IKeyPrinter {
+
+    UInt firstPartBytes = 0;
+
+    virtual std::string print(const Byte* key, UInt sz) override
+    {
+        std::string result;
+
+        for (UInt i = 0; i < sz && i < firstPartBytes; ++i)
+        {
+            // TODO: implement the loop body.
+        }
+
+        return result;
+    }
+};
+
+typedef struct BytePrinter BytePrinter;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -90,6 +109,8 @@ extern "C" {
 static ByteComparator byteComparator;
 
 static SearchAllByteComparator searchAllByteComparator;
+
+static BytePrinter bytePrinter;
 
 /**
  * Creates the tree of the given type (B-tree or one of its modifications).
@@ -190,6 +211,10 @@ static bool removeKey(FileBaseBTree** pTree, const Byte* k) { return (*pTree)->r
  * @return The removed keys count.
  */
 static int removeAll(FileBaseBTree** pTree, const Byte* k) { return (*pTree)->removeAll(k); }
+
+static bool visualize(FileBaseBTree** pTree, const char* dotFileName);
+
+static int getOrder(FileBaseBTree** pTree) { return (*pTree)->getTree()->getOrder(); }
 
 #endif
 

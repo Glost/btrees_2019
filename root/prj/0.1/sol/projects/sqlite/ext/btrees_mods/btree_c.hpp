@@ -20,6 +20,7 @@ static void create(FileBaseBTree** pTree, BaseBTree::TreeType treeType,
     close(pTree);
 
     *pTree = new FileBaseBTree(treeType, order, keySize, &byteComparator, treeFileName);
+    (*pTree)->getTree()->setKeyPrinter(&bytePrinter);
 }
 
 static void createBTree(FileBaseBTree** pTree, UShort order, UShort keySize, const char* treeFileName)
@@ -32,6 +33,7 @@ static void open(FileBaseBTree** pTree, BaseBTree::TreeType treeType, const char
     close(pTree);
 
     *pTree = new FileBaseBTree(treeType, treeFileName, &byteComparator);
+    (*pTree)->getTree()->setKeyPrinter(&bytePrinter);
 }
 
 static void close(FileBaseBTree** pTree)
@@ -55,6 +57,18 @@ static int searchAll(FileBaseBTree** pTree, const Byte* k, Byte*** keysPointer)
         (*keysPointer)[i] = *iter;
 
     return result;
+}
+
+static bool visualize(FileBaseBTree** pTree, const char* dotFileName)
+{
+    std::ofstream dotFile(dotFileName);
+
+    if (!dotFile.is_open())
+        return false;
+
+    (*pTree)->getTree()->writeDot(dotFile);
+
+    return true;
 }
 
 #ifdef __cplusplus

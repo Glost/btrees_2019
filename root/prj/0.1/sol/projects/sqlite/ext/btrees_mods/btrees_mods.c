@@ -948,13 +948,136 @@ static void rebuildIndex(btreesModsVirtualTable* virtualTable)
     executeSqlAndFinalize(virtualTable->db, sqlite3_str_finish(updateParamsSql));
 }
 
+static void btreesModsVisualize(sqlite3_context* ctx, int argc, sqlite3_value** argv)
+{
+    if (argc != 2)
+    {
+        printf("Arguments count should be equal to 2\n");
+        return;
+    }
+
+    if (sqlite3_value_type(argv[0]) != SQLITE3_TEXT || sqlite3_value_type(argv[1]) != SQLITE3_TEXT)
+    {
+        printf("Arguments types should be TEXT\n");
+        return;
+    }
+
+    sqlite3* db = sqlite3_context_db_handle(ctx);
+    FileBaseBTree* tree = NULL;
+    openTreeForTable(&tree, db, (const char*) sqlite3_value_text(argv[0]));
+
+    visualize(&tree, (const char*) sqlite3_value_text(argv[1]));
+
+    sqlite3_result_text(ctx, "File written", -1, NULL);
+}
+
+static void btreesModsGetTreeOrder(sqlite3_context* ctx, int argc, sqlite3_value** argv)
+{
+    if (argc != 1)
+    {
+        printf("Arguments count should be equal to 1\n");
+        return;
+    }
+
+    if (sqlite3_value_type(argv[0]) != SQLITE3_TEXT)
+    {
+        printf("Argument's type should be TEXT\n");
+        return;
+    }
+
+    sqlite3* db = sqlite3_context_db_handle(ctx);
+    FileBaseBTree* tree = NULL;
+    openTreeForTable(&tree, db, (const char*) sqlite3_value_text(argv[0]));
+
+    int treeOrder = getOrder(&tree);
+    sqlite3_result_int(ctx, treeOrder);
+}
+
+static void btreesModsGetTreeType(sqlite3_context* ctx, int argc, sqlite3_value** argv)
+{
+    if (argc != 1)
+    {
+        printf("Arguments count should be equal to 1\n");
+        return;
+    }
+
+    if (sqlite3_value_type(argv[0]) != SQLITE3_TEXT)
+    {
+        printf("Argument's type should be TEXT\n");
+        return;
+    }
+
+    sqlite3* db = sqlite3_context_db_handle(ctx);
+
+    sqlite3_str* sql = sqlite3_str_new(db);
+    sqlite3_str_appendf(sql, "SELECT bestIndex FROM btrees_mods_idxinfo WHERE tableName = \"%s\";",
+            sqlite3_value_text(argv[0]));
+    sqlite3_stmt* stmt = NULL;
+    executeSql(db, sqlite3_str_finish(sql), &stmt);
+
+    int bestIndex = sqlite3_column_int(stmt, 0);
+
+    sqlite3_finalize(stmt);
+
+    sqlite3_result_int(ctx, bestIndex);
+}
+
+static void openTreeForTable(FileBaseBTree** pTree, sqlite3* db, const char* tableName)
+{
+    sqlite3_str* sql = sqlite3_str_new(db);
+    sqlite3_str_appendf(sql, "SELECT treeFileName, bestIndex FROM btrees_mods_idxinfo WHERE tableName = \"%s\";",
+            tableName);
+    sqlite3_stmt* stmt = NULL;
+    executeSql(db, sqlite3_str_finish(sql), &stmt);
+
+    const char* treeFileName = (const char*) sqlite3_column_text(stmt, 0);
+    int bestIndex = sqlite3_column_int(stmt, 1);
+
+    switch (bestIndex)
+    {
+        case BTREE_NUM:
+            open(pTree, BaseBTree::TreeType::B_TREE, treeFileName);
+            break;
+        case BPLUSTREE_NUM:
+            open(pTree, BaseBTree::TreeType::B_PLUS_TREE, treeFileName);
+            break;
+        case BSTARTREE_NUM:
+            open(pTree, BaseBTree::TreeType::B_STAR_TREE, treeFileName);
+            break;
+        case BSTARPLUSTREE_NUM:
+            open(pTree, BaseBTree::TreeType::B_STAR_PLUS_TREE, treeFileName);
+            break;
+        default:
+            printf("Invalid index type: %d\n", bestIndex);
+            return;
+    }
+
+    sqlite3_finalize(stmt);
+}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 int sqlite3_btreesmods_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
     int rc = SQLITE_OK;
+
     SQLITE_EXTENSION_INIT2(pApi);
+
+    rc = sqlite3_create_function(db, "btreesModsVisualize", 2, SQLITE_UTF8, 0, btreesModsVisualize, 0, 0);
+
+    if (rc)
+        return rc;
+
+    rc = sqlite3_create_function(db, "btreesModsGetTreeOrder", 1, SQLITE_UTF8, 0, btreesModsGetTreeOrder, 0, 0);
+
+    if (rc)
+        return rc;
+
+    rc = sqlite3_create_function(db, "btreesModsGetTreeType", 1, SQLITE_UTF8, 0, btreesModsGetTreeType, 0, 0);
+
+    if (rc)
+        return rc;
 
     rc = sqlite3_create_module(db, "btrees_mods", &btreesModsModule, 0);
 

@@ -475,7 +475,11 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* 
         rc = createIndex(virtualTable, TREE_ORDER, virtualTable->params.indexDataSize + sizeof(sqlite_int64));
 
         if (rc)
+        {
+            *pzErr = sqlite3_mprintf("Cannot open tree file for writing or invalid tree type");
+            sqlite3_finalize(selectStmt);
             return rc;
+        }
 
         sqlite3_finalize(selectStmt);
     }
@@ -498,7 +502,11 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* 
         rc = openIndex(virtualTable);
 
         if (rc)
+        {
+            *pzErr = sqlite3_mprintf("Cannot open tree file for reading or invalid tree type");
+            sqlite3_finalize(getParamsStmt);
             return rc;
+        }
 
         sqlite3_finalize(getParamsStmt);
     }

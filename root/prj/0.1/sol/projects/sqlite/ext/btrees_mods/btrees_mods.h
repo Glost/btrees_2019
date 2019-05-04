@@ -20,14 +20,14 @@
 
 SQLITE_EXTENSION_INIT1
 
-#ifdef _WIN32
-__declspec(dllexport)
-#endif
-
 using namespace btree;
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+#ifdef _WIN32
+__declspec(dllexport)
 #endif
 
 int sqlite3_btreesmods_init(sqlite3* db, char** pzErrMsg, const sqlite3_api_routines* pApi);

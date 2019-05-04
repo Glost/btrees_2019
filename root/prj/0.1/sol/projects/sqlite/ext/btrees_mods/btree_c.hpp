@@ -2,13 +2,60 @@
 /// \brief     B-tree and modifications C-API.
 /// \authors   Anton Rigin
 /// \version   0.1.0
-/// \date      22.12.2018 -- 20.04.2019
+/// \date      22.12.2018 -- 04.05.2019
 ///            The bachelor thesis of Anton Rigin,
 ///            the HSE Software Engineering 4-th year bachelor student.
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "btree_c.h"
+
+bool ByteComparator::compare(const Byte *lhv, const Byte *rhv, UInt sz)
+{
+    for (UInt i = 0; i < sz && i < firstPartBytes; ++i)
+    {
+        if (lhv[i] < rhv[i])
+            return true;
+        if (lhv[i] > rhv[i])
+            return false;
+    }
+
+    return false;
+}
+
+bool ByteComparator::isEqual(const Byte *lhv, const Byte *rhv, UInt sz)
+{
+    for (UInt i = 0; i < sz && i < firstPartBytes; ++i)
+        if (lhv[i] != rhv[i])
+            return false;
+
+    return true;
+}
+
+bool SearchAllByteComparator::compare(const Byte *lhv, const Byte *rhv, UInt sz)
+{
+    for (UInt i = 0; i < sz && i < firstPartBytes; ++i)
+    {
+        if (lhv[i] < rhv[i])
+            return true;
+        if (lhv[i] > rhv[i])
+            return false;
+    }
+
+    return false;
+}
+
+std::string BytePrinter::print(const Byte *key, UInt sz)
+{
+    std::string result;
+
+    for (UInt i = 0; i < sz && i < firstPartBytes && key[i] != 0; ++i)
+        result += std::string(1, *((char*) &key[i]));
+
+    result += std::string("; ") + std::to_string(*((long long*) &key[firstPartBytes]));
+
+    return result;
+}
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,8 +66,14 @@ static void create(FileBaseBTree** pTree, BaseBTree::TreeType treeType,
 {
     close(pTree);
 
-    *pTree = new FileBaseBTree(treeType, order, keySize, &byteComparator, treeFileName);
-    (*pTree)->getTree()->setKeyPrinter(&bytePrinter);
+    try
+    {
+        *pTree = new FileBaseBTree(treeType, order, keySize, &byteComparator, treeFileName);
+    }
+    catch (std::runtime_error&)
+    {
+        *pTree = nullptr;
+    }
 }
 
 static void createBTree(FileBaseBTree** pTree, UShort order, UShort keySize, const char* treeFileName)
@@ -32,8 +85,14 @@ static void open(FileBaseBTree** pTree, BaseBTree::TreeType treeType, const char
 {
     close(pTree);
 
-    *pTree = new FileBaseBTree(treeType, treeFileName, &byteComparator);
-    (*pTree)->getTree()->setKeyPrinter(&bytePrinter);
+    try
+    {
+        *pTree = new FileBaseBTree(treeType, treeFileName, &byteComparator);
+    }
+    catch (std::runtime_error&)
+    {
+        *pTree = nullptr;
+    }
 }
 
 static void close(FileBaseBTree** pTree)
@@ -45,10 +104,10 @@ static void close(FileBaseBTree** pTree)
     }
 }
 
-static int searchAll(FileBaseBTree** pTree, const Byte* k, Byte*** keysPointer)
+static int searchAll(FileBaseBTree* tree, const Byte* k, Byte*** keysPointer)
 {
     std::list<Byte*> keys;
-    int result = (*pTree)->searchAll(k, keys);
+    int result = tree->searchAll(k, keys);
 
     *keysPointer = (Byte**) malloc(sizeof(Byte*) * keys.size());
 
@@ -59,14 +118,14 @@ static int searchAll(FileBaseBTree** pTree, const Byte* k, Byte*** keysPointer)
     return result;
 }
 
-static bool visualize(FileBaseBTree** pTree, const char* dotFileName)
+static bool visualize(FileBaseBTree* tree, const char* dotFileName)
 {
     std::ofstream dotFile(dotFileName);
 
     if (!dotFile.is_open())
         return false;
 
-    (*pTree)->getTree()->writeDot(dotFile);
+    tree->getTree()->writeDot(dotFile);
 
     return true;
 }

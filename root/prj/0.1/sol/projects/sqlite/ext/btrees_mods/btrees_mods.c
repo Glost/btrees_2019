@@ -2,7 +2,7 @@
 /// \brief     B-tree and modifications SQLite extension.
 /// \authors   Anton Rigin
 /// \version   0.1.0
-/// \date      03.01.2019 -- 20.04.2019
+/// \date      03.01.2019 -- 04.05.2019
 ///            The bachelor thesis of Anton Rigin,
 ///            the HSE Software Engineering 4-th year bachelor student.
 ///
@@ -189,7 +189,7 @@ static int btreesModsHandleConstraintEq(btreesModsCursor* cursor, sqlite3_value*
     byteComparator.firstPartBytes = virtualTable->params.indexDataSize;
 
     Byte** keys = NULL;
-    int keysCount = searchAll(&virtualTable->tree, searchedKey, &keys);
+    int keysCount = searchAll(virtualTable->tree, searchedKey, &keys);
     ++virtualTable->stats.searchesCount;
 
     cursor->rowsIdsCount = keysCount;
@@ -268,14 +268,14 @@ static int btreesModsDoUpdate(sqlite3_vtab* pVTab, int argc, sqlite3_value** arg
     {
         byteComparator.firstPartBytes = virtualTable->params.indexDataSize;
 
-        rc = (int) !removeKey(&virtualTable->tree, createTreeKey(argv[0], virtualTable));
+        rc = (int) !removeKey(virtualTable->tree, createTreeKey(argv[0], virtualTable));
         ++virtualTable->stats.searchesCount;
         ++virtualTable->stats.deletesCount;
 
         if (rc)
             return rc;
 
-        insert(&virtualTable->tree, createTreeKey(argv[virtualTable->params.indexColNumber + 2],
+        insert(virtualTable->tree, createTreeKey(argv[virtualTable->params.indexColNumber + 2],
                 *pRowid, virtualTable));
         ++virtualTable->stats.searchesCount;
         ++virtualTable->stats.insertsCount;
@@ -303,7 +303,7 @@ static int btreesModsDelete(sqlite3_vtab* pVTab, sqlite3_value* primaryKeyValue,
 
     byteComparator.firstPartBytes = virtualTable->params.indexDataSize;
 
-    rc = (int) !removeKey(&virtualTable->tree, createTreeKey(primaryKeyValue, virtualTable));
+    rc = (int) !removeKey(virtualTable->tree, createTreeKey(primaryKeyValue, virtualTable));
     ++virtualTable->stats.searchesCount;
     ++virtualTable->stats.deletesCount;
 
@@ -339,7 +339,7 @@ static int btreesModsInsert(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv,
 
     byteComparator.firstPartBytes = virtualTable->params.indexDataSize;
 
-    insert(&virtualTable->tree, createTreeKey(argv[virtualTable->params.indexColNumber + 2], *pRowid, virtualTable));
+    insert(virtualTable->tree, createTreeKey(argv[virtualTable->params.indexColNumber + 2], *pRowid, virtualTable));
     ++virtualTable->stats.searchesCount;
     ++virtualTable->stats.insertsCount;
 
@@ -566,7 +566,10 @@ static int createIndex(btreesModsVirtualTable* virtualTable, int order, int keyS
             return ERROR_CODE;
     }
 
-    return 0;
+    if (virtualTable->tree)
+        return SQLITE_OK;
+    else
+        return ERROR_CODE;
 }
 
 static int openIndex(btreesModsVirtualTable* virtualTable)
@@ -586,10 +589,13 @@ static int openIndex(btreesModsVirtualTable* virtualTable)
             open(&virtualTable->tree, BaseBTree::TreeType::B_STAR_PLUS_TREE, virtualTable->params.treeFileName);
             break;
         default:
-            return -1;
+            return ERROR_CODE;
     }
 
-    return 0;
+    if (virtualTable->tree)
+        return SQLITE_OK;
+    else
+        return ERROR_CODE;
 }
 
 static int registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, btreesModsVirtualTable* virtualTable,
@@ -693,6 +699,22 @@ static const char* getDataTypeByInt(int dataType)
         default:
             return NULL;
     }
+}
+
+static int getIntByDataType(const char* dataType)
+{
+    if (strcmp(dataType, "INTEGER") == 0)
+        return SQLITE_INTEGER;
+    else if (strcmp(dataType, "FLOAT") == 0)
+        return SQLITE_FLOAT;
+    else if (strcmp(dataType, "TEXT") == 0)
+        return SQLITE_TEXT;
+    else if (strcmp(dataType, "BLOB") == 0)
+        return SQLITE_BLOB;
+    else if (strcmp(dataType, "NULL") == 0)
+        return SQLITE_NULL;
+    else
+        return -1;
 }
 
 static sqlite3_int64 getRowId(btreesModsVirtualTable* virtualTable, sqlite3_value* primaryKeyValue)
@@ -928,10 +950,10 @@ static void rebuildIndexIfNecessary(btreesModsVirtualTable* virtualTable)
 static void rebuildIndex(btreesModsVirtualTable* virtualTable)
 {
     searchAllByteComparator.firstPartBytes = virtualTable->params.indexDataSize;
-    setSearchAllByteComparator(&virtualTable->tree);
+    setSearchAllByteComparator(virtualTable->tree);
     Byte** keys = NULL;
-    int keysCount = searchAll(&virtualTable->tree, createTreeKey((sqlite_int64) 0, virtualTable), &keys);
-    setByteComparator(&virtualTable->tree);
+    int keysCount = searchAll(virtualTable->tree, createTreeKey((sqlite_int64) 0, virtualTable), &keys);
+    setByteComparator(virtualTable->tree);
 
     close(&virtualTable->tree);
     remove(virtualTable->params.treeFileName);
@@ -940,7 +962,7 @@ static void rebuildIndex(btreesModsVirtualTable* virtualTable)
 
     int i = 0;
     for ( ; i < keysCount; ++i)
-        insert(&virtualTable->tree, keys[i]);
+        insert(virtualTable->tree, keys[i]);
 
     sqlite3_str* updateParamsSql = sqlite3_str_new(virtualTable->db);
     sqlite3_str_appendf(updateParamsSql, "UPDATE btrees_mods_idxinfo SET bestIndex = %d WHERE tableName = \"%s\";",
@@ -952,44 +974,79 @@ static void btreesModsVisualize(sqlite3_context* ctx, int argc, sqlite3_value** 
 {
     if (argc != 2)
     {
-        printf("Arguments count should be equal to 2\n");
+        sqlite3_result_text(ctx, "Arguments count should be equal to 2", -1, NULL);
         return;
     }
 
     if (sqlite3_value_type(argv[0]) != SQLITE3_TEXT || sqlite3_value_type(argv[1]) != SQLITE3_TEXT)
     {
-        printf("Arguments types should be TEXT\n");
+        sqlite3_result_text(ctx, "Arguments types should be TEXT", -1, NULL);
         return;
     }
 
     sqlite3* db = sqlite3_context_db_handle(ctx);
     FileBaseBTree* tree = NULL;
-    openTreeForTable(&tree, db, (const char*) sqlite3_value_text(argv[0]));
+    int dataType;
+    int isFound = openTreeForTable(&tree, db, (const char*) sqlite3_value_text(argv[0]), dataType);
 
-    visualize(&tree, (const char*) sqlite3_value_text(argv[1]));
+    if (!isFound)
+    {
+        sqlite3_result_text(ctx, "Table not found or table metadata is invalid", -1, NULL);
+        return;
+    }
 
-    sqlite3_result_text(ctx, "File written", -1, NULL);
+    switch (dataType)
+    {
+        case SQLITE_INTEGER:
+            setIntBytePrinter(tree);
+            break;
+        case SQLITE_FLOAT:
+            setFloatBytePrinter(tree);
+            break;
+        case SQLITE_TEXT:
+        case SQLITE_BLOB:
+            setBytePrinter(tree);
+            break;
+        case SQLITE_NULL:
+            setNullBytePrinter(tree);
+            break;
+        default:
+            printf("Invalid data type\n");
+            break;
+    }
+
+    if (visualize(tree, (const char*) sqlite3_value_text(argv[1])))
+        sqlite3_result_text(ctx, "File written", -1, NULL);
+    else
+        printf("Cannot open DOT file for writing\n");
 }
 
 static void btreesModsGetTreeOrder(sqlite3_context* ctx, int argc, sqlite3_value** argv)
 {
     if (argc != 1)
     {
-        printf("Arguments count should be equal to 1\n");
+        sqlite3_result_text(ctx, "Arguments count should be equal to 1", -1, NULL);
         return;
     }
 
     if (sqlite3_value_type(argv[0]) != SQLITE3_TEXT)
     {
-        printf("Argument's type should be TEXT\n");
+        sqlite3_result_text(ctx, "Argument's type should be TEXT", -1, NULL);
         return;
     }
 
     sqlite3* db = sqlite3_context_db_handle(ctx);
     FileBaseBTree* tree = NULL;
-    openTreeForTable(&tree, db, (const char*) sqlite3_value_text(argv[0]));
+    int dataType;
+    int isFound = openTreeForTable(&tree, db, (const char*) sqlite3_value_text(argv[0]), dataType);
 
-    int treeOrder = getOrder(&tree);
+    if (!isFound)
+    {
+        sqlite3_result_text(ctx, "Table not found or table metadata is invalid or cannot open the tree file", -1, NULL);
+        return;
+    }
+
+    int treeOrder = getOrder(tree);
     sqlite3_result_int(ctx, treeOrder);
 }
 
@@ -997,13 +1054,13 @@ static void btreesModsGetTreeType(sqlite3_context* ctx, int argc, sqlite3_value*
 {
     if (argc != 1)
     {
-        printf("Arguments count should be equal to 1\n");
+        sqlite3_result_text(ctx, "Arguments count should be equal to 1", -1, NULL);
         return;
     }
 
     if (sqlite3_value_type(argv[0]) != SQLITE3_TEXT)
     {
-        printf("Argument's type should be TEXT\n");
+        sqlite3_result_text(ctx, "Argument's type should be TEXT", -1, NULL);
         return;
     }
 
@@ -1015,6 +1072,12 @@ static void btreesModsGetTreeType(sqlite3_context* ctx, int argc, sqlite3_value*
     sqlite3_stmt* stmt = NULL;
     executeSql(db, sqlite3_str_finish(sql), &stmt);
 
+    if (sqlite3_column_type(stmt, 0) == SQLITE_NULL)
+    {
+        sqlite3_result_text(ctx, "Table not found or table metadata is invalid or cannot open the tree file", -1, NULL);
+        return;
+    }
+
     int bestIndex = sqlite3_column_int(stmt, 0);
 
     sqlite3_finalize(stmt);
@@ -1022,16 +1085,26 @@ static void btreesModsGetTreeType(sqlite3_context* ctx, int argc, sqlite3_value*
     sqlite3_result_int(ctx, bestIndex);
 }
 
-static void openTreeForTable(FileBaseBTree** pTree, sqlite3* db, const char* tableName)
+static int openTreeForTable(FileBaseBTree** pTree, sqlite3* db, const char* tableName, int& dataType)
 {
     sqlite3_str* sql = sqlite3_str_new(db);
-    sqlite3_str_appendf(sql, "SELECT treeFileName, bestIndex FROM btrees_mods_idxinfo WHERE tableName = \"%s\";",
+    sqlite3_str_appendf(sql,
+            "SELECT treeFileName, bestIndex, indexDataType FROM btrees_mods_idxinfo WHERE tableName = \"%s\";",
             tableName);
     sqlite3_stmt* stmt = NULL;
     executeSql(db, sqlite3_str_finish(sql), &stmt);
 
+    if (sqlite3_column_type(stmt, 0) == SQLITE_NULL)
+    {
+        sqlite3_finalize(stmt);
+        return FALSE;
+    }
+
     const char* treeFileName = (const char*) sqlite3_column_text(stmt, 0);
     int bestIndex = sqlite3_column_int(stmt, 1);
+    const char* indexDataType = (const char*) sqlite3_column_text(stmt, 2);
+
+    dataType = getIntByDataType(indexDataType);
 
     switch (bestIndex)
     {
@@ -1049,17 +1122,23 @@ static void openTreeForTable(FileBaseBTree** pTree, sqlite3* db, const char* tab
             break;
         default:
             printf("Invalid index type: %d\n", bestIndex);
-            return;
+            sqlite3_finalize(stmt);
+            return FALSE;
     }
 
     sqlite3_finalize(stmt);
+
+    if (*pTree)
+        return TRUE;
+    else
+        return FALSE;
 }
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int sqlite3_btreesmods_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
+int sqlite3_btreesmods_init(sqlite3* db, char** pzErrMsg, const sqlite3_api_routines* pApi) {
     int rc = SQLITE_OK;
 
     SQLITE_EXTENSION_INIT2(pApi);

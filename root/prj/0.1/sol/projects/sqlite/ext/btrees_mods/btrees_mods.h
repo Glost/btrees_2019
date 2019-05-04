@@ -2,7 +2,7 @@
 /// \brief     B-tree and modifications SQLite extension.
 /// \authors   Anton Rigin
 /// \version   0.1.0
-/// \date      03.01.2019 -- 20.04.2019
+/// \date      03.01.2019 -- 04.05.2019
 ///            The bachelor thesis of Anton Rigin,
 ///            the HSE Software Engineering 4-th year bachelor student.
 ///
@@ -30,7 +30,7 @@ using namespace btree;
 extern "C" {
 #endif
 
-int sqlite3_btreesmods_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi);
+int sqlite3_btreesmods_init(sqlite3* db, char** pzErrMsg, const sqlite3_api_routines* pApi);
 
 #ifdef __cplusplus
 }; // extern "C"
@@ -47,7 +47,7 @@ int sqlite3_btreesmods_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_rout
 #define FLOAT_SIZE 8
 #define TEXT_SIZE 256
 #define BLOB_SIZE 256
-#define NULL_SIZE 256
+#define NULL_SIZE 1
 
 #define ROWID_SIZE 8
 
@@ -472,6 +472,8 @@ static int getDataSizeByType(const char* dataType);
  */
 static const char* getDataTypeByInt(int dataType);
 
+static int getIntByDataType(const char* dataType);
+
 /**
  * Gets the row id for the given primary key value.
  *
@@ -617,13 +619,42 @@ static void rebuildIndexIfNecessary(btreesModsVirtualTable* virtualTable);
  */
 static void rebuildIndex(btreesModsVirtualTable* virtualTable);
 
+/**
+ * Visualizes the B-tree or its modification used in the virtual table to the GraphViz DOT file.
+ *
+ * @param ctx Context for writing the results.
+ * @param argc The arguments count.
+ * @param argv The arguments.
+ */
 static void btreesModsVisualize(sqlite3_context* ctx, int argc, sqlite3_value** argv);
 
+/**
+ * Gets the order for the B-tree or its modification used in the virtual table.
+ *
+ * @param ctx Context for writing the results.
+ * @param argc The arguments count.
+ * @param argv The arguments.
+ */
 static void btreesModsGetTreeOrder(sqlite3_context* ctx, int argc, sqlite3_value** argv);
 
+/**
+ * Gets the type of the B-tree or its modification used in the virtual table.
+ *
+ * @param ctx Context for writing the results.
+ * @param argc The arguments count.
+ * @param argv The arguments.
+ */
 static void btreesModsGetTreeType(sqlite3_context* ctx, int argc, sqlite3_value** argv);
 
-static void openTreeForTable(FileBaseBTree** pTree, sqlite3* db, const char* tableName);
+/**
+ * Opens the tree for the given virtual table.
+ *
+ * @param pTree The pointer to the tree.
+ * @param db The SQLite DB connection.
+ * @param tableName The virtual table name.
+ * @return 1 if the tree is successfully opened, false otherwise.
+ */
+static int openTreeForTable(FileBaseBTree** pTree, sqlite3* db, const char* tableName, int& dataType);
 
 /**
  * The btrees_mods SQLite module.

@@ -339,8 +339,13 @@ static int btreesModsInsert(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv,
 
     byteComparator.firstPartBytes = virtualTable->params.indexDataSize;
 
-    insert(virtualTable->tree, createTreeKey(argv[virtualTable->params.indexColNumber + 2], *pRowid, virtualTable));
+    Byte* treeKey = createTreeKey(argv[virtualTable->params.indexColNumber + 2], *pRowid, virtualTable);
+
     ++virtualTable->stats.searchesCount;
+    if (search(virtualTable->tree, treeKey))
+        return rc;
+
+    insert(virtualTable->tree, treeKey);
     ++virtualTable->stats.insertsCount;
 
     return rc;

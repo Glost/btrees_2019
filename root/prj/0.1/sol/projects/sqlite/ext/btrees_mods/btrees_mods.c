@@ -350,10 +350,6 @@ static int btreesModsInsert(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv,
 
     Byte* treeKey = createTreeKey(argv[virtualTable->params.indexColNumber + 2], *pRowid, virtualTable);
 
-    ++virtualTable->stats.searchesCount;
-    if (search(virtualTable->tree, treeKey))
-        return rc;
-
     insert(virtualTable->tree, treeKey);
     ++virtualTable->stats.insertsCount;
 
@@ -438,8 +434,8 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* 
     int i = 4;
     for (; i < argc; ++i)
     {
-        sqlite3_str_appendf(realSql, ",%s", argv[i]);
-        sqlite3_str_appendf(virtualSql, ",%s", argv[i]);
+        sqlite3_str_appendf(realSql, ", %s", argv[i]);
+        sqlite3_str_appendf(virtualSql, ", %s", argv[i]);
     }
 
     sqlite3_str_appendf(realSql, ");");
@@ -466,7 +462,10 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* 
         rc = executeSqlAndFinalize(db, zRealSql);
 
         if (rc)
+        {
+            *pzErr = sqlite3_mprintf("%s", sqlite3_errmsg(db));
             return rc;
+        }
 
         sqlite3_str* selectSql = sqlite3_str_new(db);
         sqlite3_str_appendf(selectSql, "SELECT * FROM %s_real;", argv[2]);
@@ -476,7 +475,10 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* 
         *pzErr = sqlite3_mprintf("%s", sqlite3_errmsg(db));
 
         if (rc)
+        {
+            *pzErr = sqlite3_mprintf("%s", sqlite3_errmsg(db));
             return rc;
+        }
 
         char treeFileName[CHAR_BUFFER_SIZE];
         char* filledTreeFileName = getTreeFileName(treeFileName);
@@ -484,7 +486,10 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* 
         rc = registerIndexColumn(db, selectStmt, virtualTable, argv[2], filledTreeFileName);
 
         if (rc)
+        {
+            *pzErr = sqlite3_mprintf("%s", sqlite3_errmsg(db));
             return rc;
+        }
 
         rc = createIndex(virtualTable, TREE_ORDER, virtualTable->params.indexDataSize + sizeof(sqlite_int64));
 
@@ -528,7 +533,10 @@ static int btreesModsInit(sqlite3* db, void* pAux, int argc, const char* const* 
     rc = sqlite3_declare_vtab(db, zVirtualSql);
 
     if (rc)
+    {
+        *pzErr = sqlite3_mprintf("%s", sqlite3_errmsg(db));
         return rc;
+    }
 
     virtualTable->base.pModule = &btreesModsModule;
     virtualTable->base.nRef = 1;
@@ -777,7 +785,7 @@ static int executeSql(sqlite3* db, char* sql, sqlite3_stmt** stmt)
     else if (SQLITE_OK == (rc = sqlite3_prepare_v2(db, sql, -1, stmt, 0)))
         rc = sqlite3_step(*stmt);
 
-    rc = SQLITE_DONE ? SQLITE_OK : rc;
+    rc = rc == SQLITE_DONE || rc == SQLITE_ROW ? SQLITE_OK : rc;
 
     return rc;
 }

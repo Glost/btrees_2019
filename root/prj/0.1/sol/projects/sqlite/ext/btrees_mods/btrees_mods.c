@@ -229,6 +229,10 @@ static int btreesModsDoUpdate(sqlite3_vtab* pVTab, int argc, sqlite3_value** arg
     int rc = SQLITE_OK;
     btreesModsVirtualTable* virtualTable = (btreesModsVirtualTable*) pVTab;
 
+    if (sqlite3_value_type(argv[virtualTable->params.indexColNumber + 2]) !=
+            getIntByDataType(virtualTable->params.indexDataType))
+        return SQLITE_MISMATCH;
+
     sqlite3_str* selectSql = sqlite3_str_new(virtualTable->db);
     sqlite3_str_appendf(selectSql, "SELECT * FROM %s_real;", virtualTable->tableName);
     sqlite3_stmt* selectStmt = NULL;
@@ -316,6 +320,11 @@ static int btreesModsInsert(sqlite3_vtab* pVTab, int argc, sqlite3_value** argv,
 {
     btreesModsVirtualTable* virtualTable = (btreesModsVirtualTable*) pVTab;
     rebuildIndexIfNecessary(virtualTable);
+
+    if (sqlite3_value_type(argv[virtualTable->params.indexColNumber + 2]) !=
+            getIntByDataType(virtualTable->params.indexDataType))
+        return SQLITE_MISMATCH;
+
     sqlite3_str* pSql = sqlite3_str_new(virtualTable->db);
     char* strValue = NULL;
     convertSqliteValueToString(argv[2], &strValue);
@@ -766,7 +775,9 @@ static int executeSql(sqlite3* db, char* sql, sqlite3_stmt** stmt)
     if (!sql)
         rc = SQLITE_NOMEM;
     else if (SQLITE_OK == (rc = sqlite3_prepare_v2(db, sql, -1, stmt, 0)))
-        sqlite3_step(*stmt);
+        rc = sqlite3_step(*stmt);
+
+    rc = SQLITE_DONE ? SQLITE_OK : rc;
 
     return rc;
 }
@@ -951,7 +962,7 @@ static void rebuildIndexIfNecessary(btreesModsVirtualTable* virtualTable)
 
     if (virtualTable->stats.insertsCount > (1 - REBUILD_COEF) * updatesCount)
         virtualTable->params.bestIndex = BSTARTREE_NUM;
-    else if (virtualTable->stats.insertsCount >= REBUILD_COEF * updatesCount)
+    else if (virtualTable->stats.insertsCount >= (0.5 + REBUILD_COEF) * updatesCount)
         virtualTable->params.bestIndex = BSTARPLUSTREE_NUM;
     else
         virtualTable->params.bestIndex = BPLUSTREE_NUM;

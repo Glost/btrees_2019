@@ -58,9 +58,9 @@ int sqlite3_btreesmods_init(sqlite3* db, char** pzErrMsg, const sqlite3_api_rout
 #define TRUE 1
 #define FALSE 0
 
-#define TREE_ORDER 200
+#define TREE_ORDER 100
 
-#define REBUILD_COEF 0.25
+#define REBUILD_COEF 0.05
 #define REBUILD_COUNT 1000
 #define REBUILD_MAX_COUNT 10000
 
@@ -472,6 +472,12 @@ static int getDataSizeByType(const char* dataType);
  */
 static const char* getDataTypeByInt(int dataType);
 
+/**
+ * Converts the data type name to the data type number.
+ *
+ * @param dataType The data type name.
+ * @return The data type number.
+ */
 static int getIntByDataType(const char* dataType);
 
 /**

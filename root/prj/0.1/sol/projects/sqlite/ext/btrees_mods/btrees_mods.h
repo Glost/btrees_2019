@@ -60,7 +60,7 @@ int sqlite3_btreesmods_init(sqlite3* db, char** pzErrMsg, const sqlite3_api_rout
 
 #define TREE_ORDER 100
 
-#define REBUILD_COEF 0.05
+#define REBUILD_COEF 0.1
 #define REBUILD_COUNT 1000
 #define REBUILD_MAX_COUNT 10000
 

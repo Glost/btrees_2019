@@ -265,6 +265,9 @@ static int btreesModsDoUpdate(sqlite3_vtab* pVTab, int argc, sqlite3_value** arg
 
     rc = executeSqlAndFinalize(virtualTable->db, sqlite3_str_finish(pSql));
 
+    if (rc)
+        return rc;
+
     *pRowid = getRowId(virtualTable, argv[virtualTable->params.indexColNumber + 2]);
 
     if (strcmp((char*) sqlite3_value_text(argv[0]),

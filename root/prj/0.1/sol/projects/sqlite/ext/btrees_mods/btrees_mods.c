@@ -276,7 +276,6 @@ static int btreesModsDoUpdate(sqlite3_vtab* pVTab, int argc, sqlite3_value** arg
         byteComparator.firstPartBytes = virtualTable->params.indexDataSize;
 
         rc = (int) !removeKey(virtualTable->tree, createTreeKey(argv[0], virtualTable));
-        ++virtualTable->stats.searchesCount;
         ++virtualTable->stats.deletesCount;
 
         if (rc)
@@ -284,7 +283,6 @@ static int btreesModsDoUpdate(sqlite3_vtab* pVTab, int argc, sqlite3_value** arg
 
         insert(virtualTable->tree, createTreeKey(argv[virtualTable->params.indexColNumber + 2],
                 *pRowid, virtualTable));
-        ++virtualTable->stats.searchesCount;
         ++virtualTable->stats.insertsCount;
     }
 
@@ -311,7 +309,6 @@ static int btreesModsDelete(sqlite3_vtab* pVTab, sqlite3_value* primaryKeyValue,
     byteComparator.firstPartBytes = virtualTable->params.indexDataSize;
 
     rc = (int) !removeKey(virtualTable->tree, createTreeKey(primaryKeyValue, virtualTable));
-    ++virtualTable->stats.searchesCount;
     ++virtualTable->stats.deletesCount;
 
     *pRowid = getRowId(virtualTable, primaryKeyValue);

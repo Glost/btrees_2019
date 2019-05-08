@@ -1107,6 +1107,7 @@ static void btreesModsGetTreeType(sqlite3_context* ctx, int argc, sqlite3_value*
     if (sqlite3_column_type(stmt, 0) == SQLITE_NULL)
     {
         sqlite3_result_text(ctx, "Table not found or table metadata is invalid or cannot open the tree file", -1, NULL);
+        sqlite3_finalize(stmt);
         return;
     }
 

@@ -1,0 +1,4 @@
+digraph btree {
+node [shape = record, height = .1];
+node0[label = "<c0>|ABC123; 2|<c1>|def456; 1|<c2>"];
+}

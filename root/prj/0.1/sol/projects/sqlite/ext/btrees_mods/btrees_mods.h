@@ -58,9 +58,10 @@ int sqlite3_btreesmods_init(sqlite3* db, char** pzErrMsg, const sqlite3_api_rout
 #define TRUE 1
 #define FALSE 0
 
-#define TREE_ORDER 100
+#define TREE_ORDER 750
 
 #define REBUILD_COEF 0.1
+#define REBUILD_SPLIT_PERCENT_POINT 0.7397
 #define REBUILD_COUNT 1000
 #define REBUILD_MAX_COUNT 10000
 
@@ -159,7 +160,7 @@ struct btreesModsVirtualTable {
      * The virtual table index params.
      */
     indexParams params = {
-            BTREE_NUM,
+            BPLUSTREE_NUM,
             -1,
             NULL,
             NULL,
@@ -624,6 +625,11 @@ static void rebuildIndexIfNecessary(btreesModsVirtualTable* virtualTable);
  * @param virtualTable The virtual table instance.
  */
 static void rebuildIndex(btreesModsVirtualTable* virtualTable);
+
+/**
+ * Measures max memory usage during the last query execution.
+ */
+static void measureMaxMemoryUsage();
 
 /**
  * Visualizes the B-tree or its modification used in the virtual table to the GraphViz DOT file.

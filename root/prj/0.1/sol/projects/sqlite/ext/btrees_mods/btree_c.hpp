@@ -127,6 +127,8 @@ static bool visualize(FileBaseBTree* tree, const char* dotFileName)
 
     tree->getTree()->writeDot(dotFile);
 
+    dotFile.close();
+
     return true;
 }
 

@@ -658,7 +658,7 @@ static int registerIndexColumn(sqlite3* db, sqlite3_stmt* stmt, btreesModsVirtua
     copyString(&virtualTable->params.indexColName, "rowid");
     copyString(&virtualTable->params.indexDataType, "INTEGER");
     virtualTable->params.indexDataSize = getDataSizeByType(virtualTable->params.indexDataType);
-    virtualTable->params.bestIndex = BTREE_NUM;
+    virtualTable->params.bestIndex = BPLUSTREE_NUM;
     copyString(&virtualTable->params.treeFileName, treeFileName);
 
     int i = 0;
@@ -968,12 +968,10 @@ static void rebuildIndexIfNecessary(btreesModsVirtualTable* virtualTable)
 
     int oldBestIndex = virtualTable->params.bestIndex;
 
-    if (virtualTable->stats.insertsCount > (1 - REBUILD_COEF) * updatesCount)
+    if (virtualTable->stats.insertsCount > REBUILD_SPLIT_PERCENT_POINT * updatesCount)
         virtualTable->params.bestIndex = BSTARTREE_NUM;
-    else if (virtualTable->stats.insertsCount >= (0.5 + REBUILD_COEF) * updatesCount)
-        virtualTable->params.bestIndex = BSTARPLUSTREE_NUM;
     else
-        virtualTable->params.bestIndex = BPLUSTREE_NUM;
+        virtualTable->params.bestIndex = BSTARPLUSTREE_NUM;
 
     if (virtualTable->params.bestIndex != oldBestIndex)
         rebuildIndex(virtualTable);

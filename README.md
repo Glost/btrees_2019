@@ -1,8 +1,6 @@
 # btrees_2019
 btrees_2019 research project
 
-**Author:** Anton Rigin
-
 * Multiway trees C++ library is available in `root\prj\0.1\sol\lib\btrees_lib`
 * The SQLite extension file for Windows is available in `root\prj\0.1\sol\output\btrees_mods.dll`
 * The SQLite extension file for Linux is available in `root\prj\0.1\sol\output\btrees_mods.so`
